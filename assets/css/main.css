@@ -4,3 +4,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+ul li {
+   @apply list-disc list-inside; 
+}
