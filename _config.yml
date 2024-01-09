@@ -7,3 +7,8 @@ plugins:
 postcss:
   cache: false
 
+defaults:
+  - scope:
+      path: "assets/images"
+    values:
+      image: true
