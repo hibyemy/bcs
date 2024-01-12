@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: home
 title: "Bowen Cloud Services - Reliable, grassroots cloud storage"
 ---
 
@@ -12,23 +12,31 @@ title: "Bowen Cloud Services - Reliable, grassroots cloud storage"
 </div>
 
 <div class="mx-auto container">
-    <h2 class="text-3xl mb-2">Our Services</h2>
-    <div class="flex gap-4">
-        <div class="h-60 w-60 relative rounded-lg bg-sky-800"><a href="https://cloud.bowenchen.xyz">
+    <h2 class="text-3xl m-2">Our Services</h2>
+    <div class="flex flex-wrap sm:gap-4 justify-around sm:justify-normal">
+        <div class="h-40 w-40 relative rounded-lg bg-sky-800"><a href="https://cloud.bowenchen.xyz">
                 <h3 class="z-10 absolute m-3 text-lg text-center text-gray-50">Nextcloud</h3>
-                <img class="transition-transform absolute z-20 h-full bg-sky-500 p-5 rounded-lg hover:translate-y-12"
-                    src="https://bowenchen.xyz/core/img/logo/logo.svg">
+                <img class="transition-transform absolute z-20 h-full bg-sky-500 p-5 rounded-lg sm:hover:translate-y-12"
+                    src="assets/images/nextcloud-icon.svg">
             </a>
         </div>
-        <div class="h-60 w-60 relative rounded-lg bg-gray-700"><a href="https://jellyfin.bowenchen.xyz">
+        <div class="h-40 w-40 relative rounded-lg bg-gray-700"><a href="https://jellyfin.bowenchen.xyz">
                 <h3 class="z-10 absolute m-3 text-lg text-center text-gray-50">Jellyfin</h3>
-                <img class="transition-transform absolute z-20 h-full bg-slate-800 p-5 rounded-lg hover:translate-y-12"
-                    src="https://raw.githubusercontent.com/jellyfin/jellyfin-ux/master/branding/SVG/icon-transparent.svg">
+                <img class="transition-transform absolute z-20 h-full bg-slate-800 p-5 rounded-lg sm:hover:translate-y-12"
+                    src="assets/images/jellyfin-icon.svg">
             </a>
         </div>
     </div>
+    <h2 class="text-3xl m-2 mt-4">Roadmap</h2>
+    <ul class="mx-6">
+        <li>To be announced.</li>
+    </ul>
 </div>
 
 <script>
-    document.querySelector("#time").innerHTML = new Date().toDateString();
+    const updateClock = () => {
+        document.querySelector("#time").innerHTML = new Date().toLocaleString();
+    }
+    updateClock();
+    setInterval(updateClock, 1000)
 </script>
