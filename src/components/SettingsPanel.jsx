@@ -5,6 +5,7 @@ const TOGGLES = [
   { key: 'globe',      label: '3D Globe' },
   { key: 'drilldown',  label: 'Subsystem Drill-Down' },
   { key: 'livefeeds',  label: 'Live Data Feeds' },
+  { key: 'edgestats',  label: 'Edge Network Telemetry' },
 ];
 
 export default function SettingsPanel({ features, onToggle, onClose }) {

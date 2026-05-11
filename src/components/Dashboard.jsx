@@ -5,6 +5,7 @@ import SubSystemView from './SubSystemView';
 import LiveFeeds from './LiveFeeds';
 import SettingsPanel from './SettingsPanel';
 import GuidePanel from './GuidePanel';
+import NetworkStats from './NetworkStats';
 
 /* ── Tiny helper: random hex chars ──────────────────── */
 function randHex(len = 8) {
@@ -223,6 +224,7 @@ export default function Dashboard() {
   const [uptime, setUptime] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [showEdgeStats, setShowEdgeStats] = useState(false);
   const [drillDownService, setDrillDownService] = useState(null);
 
   /* ── Feature toggles (persisted in sessionStorage) ── */
@@ -262,6 +264,7 @@ export default function Dashboard() {
         if (drillDownService) setDrillDownService(null);
         else if (showSettings) setShowSettings(false);
         else if (showGuide) setShowGuide(false);
+        else if (showEdgeStats) setShowEdgeStats(false);
       }
     };
     window.addEventListener('keydown', handler);
@@ -299,6 +302,11 @@ export default function Dashboard() {
         <GuidePanel onClose={() => setShowGuide(false)} />
       )}
 
+      {/* Edge Stats overlay */}
+      {showEdgeStats && (
+        <NetworkStats onClose={() => setShowEdgeStats(false)} />
+      )}
+
       {/* ── Settings overlay ──────────────────────── */}
       {showSettings && (
         <SettingsPanel
@@ -324,6 +332,12 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-4 text-[11px] text-green-500/60">
+            <button
+              onClick={() => setShowEdgeStats(true)}
+              className="text-[10px] uppercase tracking-widest text-cyan-500/40 hover:text-cyan-400 border border-cyan-500/20 px-2 py-1 hover:border-cyan-500/50 transition-colors hidden sm:block"
+            >
+              [EDGE_STATS]
+            </button>
             <button
               onClick={() => setShowGuide(true)}
               className="text-[10px] uppercase tracking-widest text-green-500/40 hover:text-green-400 border border-green-500/20 px-2 py-1 hover:border-green-500/50 transition-colors hidden sm:block"
@@ -365,7 +379,13 @@ export default function Dashboard() {
             root@bcs-gateway:~# status --all
           </div>
           {/* Mobile buttons */}
-          <div className="flex gap-2 mt-3 sm:hidden">
+          <div className="flex flex-wrap gap-2 mt-3 sm:hidden">
+            <button
+              onClick={() => setShowEdgeStats(true)}
+              className="text-[10px] uppercase tracking-widest text-cyan-500/40 hover:text-cyan-400 border border-cyan-500/20 px-3 py-1.5 hover:border-cyan-500/50 transition-colors"
+            >
+              [EDGE_STATS]
+            </button>
             <button
               onClick={() => setShowGuide(true)}
               className="text-[10px] uppercase tracking-widest text-green-500/40 hover:text-green-400 border border-green-500/20 px-3 py-1.5 hover:border-green-500/50 transition-colors"
