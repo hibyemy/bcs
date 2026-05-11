@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import CommandConsole from './CommandConsole';
+import Globe from './Globe';
+import SubSystemView from './SubSystemView';
+import LiveFeeds from './LiveFeeds';
+import SettingsPanel from './SettingsPanel';
 
 /* ── Tiny helper: random hex chars ──────────────────── */
 function randHex(len = 8) {
@@ -68,6 +73,7 @@ function ActivityLog() {
     'factorio.bowenchen.xyz',
     'ssh.bowenchen.xyz',
     'dns.bowenchen.xyz',
+    'signals.bowenchen.xyz',
   ];
   const actions = [
     'SYNC', 'AUTH', 'STREAM', 'HEARTBEAT', 'TRANSFER',
@@ -111,15 +117,15 @@ function SystemStats() {
 
   useEffect(() => {
     const id = setInterval(() => {
-      setStats({
-        cpu: Math.max(3, Math.min(95, stats.cpu + (Math.random() * 10 - 5))),
-        ram: Math.max(20, Math.min(90, stats.ram + (Math.random() * 4 - 2))),
-        zpool: Math.max(50, Math.min(85, stats.zpool + (Math.random() * 2 - 1))),
-        net: Math.max(0.1, Math.min(10, stats.net + (Math.random() * 2 - 1))),
-      });
+      setStats(prev => ({
+        cpu: Math.max(3, Math.min(95, prev.cpu + (Math.random() * 10 - 5))),
+        ram: Math.max(20, Math.min(90, prev.ram + (Math.random() * 4 - 2))),
+        zpool: Math.max(50, Math.min(85, prev.zpool + (Math.random() * 2 - 1))),
+        net: Math.max(0.1, Math.min(10, prev.net + (Math.random() * 2 - 1))),
+      }));
     }, 2000);
     return () => clearInterval(id);
-  }, [stats]);
+  }, []);
 
   const bars = [
     { label: 'CPU',   value: stats.cpu,   unit: '%' },
@@ -155,31 +161,42 @@ function SystemStats() {
 }
 
 /* ── Service node card ──────────────────────────────── */
-function ServiceNode({ name, desc, url, status }) {
+function ServiceNode({ name, desc, url, status, onDrillDown, drillDownEnabled }) {
   const [hover, setHover] = useState(false);
+
+  const handleClick = (e) => {
+    if (drillDownEnabled && onDrillDown) {
+      e.preventDefault();
+      onDrillDown(name.toLowerCase());
+    }
+  };
 
   return (
     <a
       href={url}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={handleClick}
       className="block border-glow bg-black/60 p-4 relative overflow-hidden group transition-all duration-300 hover:border-green-500/60 hover:bg-green-500/5"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      {/* Pulse ring on hover */}
       {hover && (
         <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-green-500">
           <div className="absolute inset-0 rounded-full bg-green-500 animate-pulse-ring" />
         </div>
       )}
 
-      {/* Status dot */}
       <div className="flex items-center gap-2 mb-2">
         <div className={`w-1.5 h-1.5 rounded-full ${status === 'online' ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.8)]' : 'bg-red-500'}`} />
         <span className="text-[10px] uppercase tracking-widest text-green-500/50">
           {status}
         </span>
+        {drillDownEnabled && (
+          <span className="text-[9px] uppercase tracking-widest text-cyan-400/30 ml-auto">
+            [click to inspect]
+          </span>
+        )}
       </div>
 
       <div className="text-sm font-bold text-green-400 text-glow mb-1 group-hover:text-green-300 transition-colors">
@@ -193,7 +210,6 @@ function ServiceNode({ name, desc, url, status }) {
         {url}
       </div>
 
-      {/* Bottom accent line */}
       <div className="absolute bottom-0 left-0 h-[1px] bg-gradient-to-r from-transparent via-green-500/40 to-transparent w-full opacity-0 group-hover:opacity-100 transition-opacity" />
     </a>
   );
@@ -204,7 +220,27 @@ function ServiceNode({ name, desc, url, status }) {
    ═══════════════════════════════════════════════════════ */
 export default function Dashboard() {
   const [uptime, setUptime] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
+  const [drillDownService, setDrillDownService] = useState(null);
 
+  /* ── Feature toggles (persisted in sessionStorage) ── */
+  const [features, setFeatures] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('bcs-features');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { console: true, globe: true, drilldown: true, livefeeds: true };
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('bcs-features', JSON.stringify(features));
+  }, [features]);
+
+  const toggleFeature = useCallback((key) => {
+    setFeatures(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  /* ── Uptime counter ─────────────────────────────────  */
   useEffect(() => {
     const id = setInterval(() => setUptime(p => p + 1), 1000);
     return () => clearInterval(id);
@@ -217,7 +253,19 @@ export default function Dashboard() {
     return `${h}:${m}:${sec}`;
   };
 
-  /* Matrix rain columns */
+  /* ── Keyboard shortcut for settings ─────────────────  */
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'Escape') {
+        if (drillDownService) setDrillDownService(null);
+        else if (showSettings) setShowSettings(false);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [drillDownService, showSettings]);
+
+  /* ── Matrix rain columns ────────────────────────────  */
   const rainCols = Array.from({ length: 12 }, (_, i) => (
     <MatrixColumn
       key={i}
@@ -230,12 +278,29 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen w-full bg-black grid-bg scanlines relative overflow-hidden">
 
-      {/* Matrix rain background */}
+      {/* ── Matrix rain background ────────────────── */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         {rainCols}
       </div>
 
-      {/* ── Top bar ───────────────────────────────────── */}
+      {/* ── Sub-system overlay ────────────────────── */}
+      {features.drilldown && drillDownService && (
+        <SubSystemView
+          service={drillDownService}
+          onClose={() => setDrillDownService(null)}
+        />
+      )}
+
+      {/* ── Settings overlay ──────────────────────── */}
+      {showSettings && (
+        <SettingsPanel
+          features={features}
+          onToggle={toggleFeature}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {/* ── Top bar ───────────────────────────────── */}
       <div className="relative z-10 border-b border-green-500/20 bg-black/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -251,6 +316,12 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-4 text-[11px] text-green-500/60">
+            <button
+              onClick={() => setShowSettings(true)}
+              className="text-[10px] uppercase tracking-widest text-green-500/40 hover:text-green-400 border border-green-500/20 px-2 py-1 hover:border-green-500/50 transition-colors hidden sm:block"
+            >
+              [CONFIG]
+            </button>
             <span className="hidden md:inline">UPTIME {fmtUptime(uptime)}</span>
             <span className="tabular-nums">
               {new Date().toLocaleTimeString('en-US', { hour12: false })}
@@ -260,12 +331,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Data ticker ───────────────────────────────── */}
+      {/* ── Data ticker ───────────────────────────── */}
       <div className="relative z-10">
         <DataTicker />
       </div>
 
-      {/* ── Main grid ─────────────────────────────────── */}
+      {/* ── Main grid ─────────────────────────────── */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-6 md:py-10">
 
         {/* Hero area */}
@@ -279,56 +350,104 @@ export default function Dashboard() {
           <div className="text-sm text-green-500/40">
             root@bcs-gateway:~# status --all
           </div>
+          {/* Mobile config button */}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="sm:hidden mt-3 text-[10px] uppercase tracking-widest text-green-500/40 hover:text-green-400 border border-green-500/20 px-3 py-1.5 hover:border-green-500/50 transition-colors"
+          >
+            [CONFIG]
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
 
-          {/* ── Left column: Services ─────────────────── */}
+          {/* ── Left column ───────────────────────── */}
           <div className="lg:col-span-2 space-y-4">
+
+            {/* Services header */}
             <div className="text-[10px] uppercase tracking-[0.2em] text-green-500/40 mb-1 font-bold"
               style={{ fontFamily: 'var(--font-display)' }}>
               Active Services
+              {features.drilldown && (
+                <span className="text-cyan-400/30 ml-3">[drill-down enabled]</span>
+              )}
             </div>
 
+            {/* Service cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <ServiceNode
                 name="Nextcloud"
                 desc="Private cloud storage · WebDAV · CalDAV · CardDAV sync"
                 url="https://cloud.bowenchen.xyz"
                 status="online"
+                onDrillDown={setDrillDownService}
+                drillDownEnabled={features.drilldown}
               />
               <ServiceNode
                 name="Jellyfin"
                 desc="Media server · Transcoding · Live TV · DLNA"
                 url="https://jellyfin.bowenchen.xyz"
                 status="online"
+                onDrillDown={setDrillDownService}
+                drillDownEnabled={features.drilldown}
               />
               <ServiceNode
                 name="Factorio"
                 desc="Dedicated game server · Port 34197 · Headless"
                 url="#"
                 status="online"
+                onDrillDown={setDrillDownService}
+                drillDownEnabled={features.drilldown}
               />
               <ServiceNode
-                name="SSH Gateway"
+                name="SSH"
                 desc="Secure shell access · Ed25519 · Port 22"
                 url="#"
                 status="online"
+                onDrillDown={setDrillDownService}
+                drillDownEnabled={features.drilldown}
+              />
+              <ServiceNode
+                name="Signals Visualizer"
+                desc="Interactive signals & systems learning platform"
+                url="https://signals.bowenchen.xyz"
+                status="online"
+                onDrillDown={setDrillDownService}
+                drillDownEnabled={features.drilldown}
               />
             </div>
 
-            {/* ── Stats bar ───────────────────────────── */}
+            {/* Stats */}
             <SystemStats />
+
+            {/* Live Feeds */}
+            {features.livefeeds && <LiveFeeds />}
           </div>
 
-          {/* ── Right column: Activity log ────────────── */}
-          <div className="lg:col-span-1 min-h-[300px]">
-            <ActivityLog />
+          {/* ── Right column ──────────────────────── */}
+          <div className="lg:col-span-1 space-y-4">
+            {/* Globe */}
+            {features.globe && <Globe />}
+
+            {/* Activity log */}
+            <div className="h-[300px]">
+              <ActivityLog />
+            </div>
           </div>
         </div>
+
+        {/* ── Console (full width at bottom) ──────── */}
+        {features.console && (
+          <div className="mt-6 h-[280px]">
+            <CommandConsole
+              uptimeSeconds={uptime}
+              onDrillDown={features.drilldown ? setDrillDownService : null}
+            />
+          </div>
+        )}
       </div>
 
-      {/* ── Footer ────────────────────────────────────── */}
+      {/* ── Footer ────────────────────────────────── */}
       <div className="relative z-10 border-t border-green-500/10 mt-12">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between text-[10px] text-green-500/30">
           <span>&#169; {new Date().getFullYear()} Bowen Cloud Services, Ltd.</span>
