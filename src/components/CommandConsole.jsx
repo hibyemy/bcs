@@ -149,6 +149,9 @@ export default function CommandConsole({ uptimeSeconds = 0, onDrillDown }) {
         setTimeout(() => {
           if (onDrillDown) {
             onDrillDown(svc);
+          } else if (SERVICES[svc] && SERVICES[svc] !== '#') {
+            setHistory(h => [...h, 'Connection established.', `Redirecting to ${svc} landing page...`]);
+            window.open(SERVICES[svc], '_blank', 'noopener,noreferrer');
           } else {
             setHistory(h => [...h, 'Connection established.', `Entering ${svc} subsystem...`]);
           }
