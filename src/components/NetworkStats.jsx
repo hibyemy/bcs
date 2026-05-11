@@ -18,7 +18,7 @@ export default function NetworkStats({ onClose }) {
         try {
           data = await res.json();
         } catch (e) {
-          throw new Error('Telemetry link failed (Invalid response format)');
+          throw new Error('Telemetry link failed (Invalid response format(i havent setup the api yet!!!!))');
         }
         
         if (data.error) {
