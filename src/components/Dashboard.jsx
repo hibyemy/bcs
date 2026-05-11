@@ -350,7 +350,7 @@ export default function Dashboard() {
             >
               [CONFIG]
             </button>
-            <span className="hidden md:inline">UPTIME {fmtUptime(uptime)}</span>
+            <span className="hidden md:inline">CONNECTION UPTIME {fmtUptime(uptime)}</span>
             <span className="tabular-nums">
               {new Date().toLocaleTimeString('en-US', { hour12: false })}
             </span>
