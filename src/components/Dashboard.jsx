@@ -4,6 +4,7 @@ import Globe from './Globe';
 import SubSystemView from './SubSystemView';
 import LiveFeeds from './LiveFeeds';
 import SettingsPanel from './SettingsPanel';
+import GuidePanel from './GuidePanel';
 
 /* ── Tiny helper: random hex chars ──────────────────── */
 function randHex(len = 8) {
@@ -221,6 +222,7 @@ function ServiceNode({ name, desc, url, status, onDrillDown, drillDownEnabled })
 export default function Dashboard() {
   const [uptime, setUptime] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [drillDownService, setDrillDownService] = useState(null);
 
   /* ── Feature toggles (persisted in sessionStorage) ── */
@@ -259,6 +261,7 @@ export default function Dashboard() {
       if (e.key === 'Escape') {
         if (drillDownService) setDrillDownService(null);
         else if (showSettings) setShowSettings(false);
+        else if (showGuide) setShowGuide(false);
       }
     };
     window.addEventListener('keydown', handler);
@@ -291,6 +294,11 @@ export default function Dashboard() {
         />
       )}
 
+      {/* Guide overlay */}
+      {showGuide && (
+        <GuidePanel onClose={() => setShowGuide(false)} />
+      )}
+
       {/* ── Settings overlay ──────────────────────── */}
       {showSettings && (
         <SettingsPanel
@@ -316,6 +324,12 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-4 text-[11px] text-green-500/60">
+            <button
+              onClick={() => setShowGuide(true)}
+              className="text-[10px] uppercase tracking-widest text-green-500/40 hover:text-green-400 border border-green-500/20 px-2 py-1 hover:border-green-500/50 transition-colors hidden sm:block"
+            >
+              [GUIDE]
+            </button>
             <button
               onClick={() => setShowSettings(true)}
               className="text-[10px] uppercase tracking-widest text-green-500/40 hover:text-green-400 border border-green-500/20 px-2 py-1 hover:border-green-500/50 transition-colors hidden sm:block"
@@ -350,13 +364,21 @@ export default function Dashboard() {
           <div className="text-sm text-green-500/40">
             root@bcs-gateway:~# status --all
           </div>
-          {/* Mobile config button */}
-          <button
-            onClick={() => setShowSettings(true)}
-            className="sm:hidden mt-3 text-[10px] uppercase tracking-widest text-green-500/40 hover:text-green-400 border border-green-500/20 px-3 py-1.5 hover:border-green-500/50 transition-colors"
-          >
-            [CONFIG]
-          </button>
+          {/* Mobile buttons */}
+          <div className="flex gap-2 mt-3 sm:hidden">
+            <button
+              onClick={() => setShowGuide(true)}
+              className="text-[10px] uppercase tracking-widest text-green-500/40 hover:text-green-400 border border-green-500/20 px-3 py-1.5 hover:border-green-500/50 transition-colors"
+            >
+              [GUIDE]
+            </button>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="text-[10px] uppercase tracking-widest text-green-500/40 hover:text-green-400 border border-green-500/20 px-3 py-1.5 hover:border-green-500/50 transition-colors"
+            >
+              [CONFIG]
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
