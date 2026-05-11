@@ -231,7 +231,7 @@ export default function Dashboard() {
       const saved = sessionStorage.getItem('bcs-features');
       if (saved) return JSON.parse(saved);
     } catch {}
-    return { console: true, globe: true, drilldown: true, livefeeds: true };
+    return { console: true, globe: true, drilldown: false, livefeeds: true };
   });
 
   useEffect(() => {

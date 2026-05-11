@@ -72,13 +72,35 @@ export default function GuidePanel({ onClose }) {
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <div className="space-y-2">
             <h2 className="text-green-400 text-lg font-bold uppercase tracking-wider text-glow" style={{ fontFamily: 'var(--font-display)' }}>
-              Getting Started
+              Terminal Reference (bcs-sh v1.0)
             </h2>
-            <p className="text-[12px] text-green-500/70 leading-relaxed">
-              Welcome to the BCS Boardroom Terminal. This interface is designed for high-fidelity monitoring 
-              and control of the Bowen Cloud Services network. Navigate using the visual nodes or the 
-              integrated command console for advanced operations.
-            </p>
+            <div className="text-[11px] text-green-500/70 space-y-3 bg-green-500/5 border border-green-500/10 p-4 font-mono">
+              <div>
+                <span className="text-green-400 font-bold">[BASIC COMMANDS]</span>
+                <ul className="list-disc ml-4 mt-1 space-y-1">
+                  <li><span className="text-cyan-400">help</span> - Display all available commands.</li>
+                  <li><span className="text-cyan-400">status</span> - View real-time system uptime and load averages.</li>
+                  <li><span className="text-cyan-400">neofetch</span> - Display system architecture and ASCII logo.</li>
+                  <li><span className="text-cyan-400">clear</span> - Wipe the terminal scrollback buffer.</li>
+                </ul>
+              </div>
+              <div>
+                <span className="text-green-400 font-bold">[NETWORK OPS]</span>
+                <ul className="list-disc ml-4 mt-1 space-y-1">
+                  <li><span className="text-cyan-400">ping &lt;svc&gt;</span> - Test latency to (nextcloud, jellyfin, signals, etc).</li>
+                  <li><span className="text-cyan-400">ssh &lt;svc&gt;</span> - Remote into a node (triggers Drill-Down if enabled).</li>
+                  <li><span className="text-cyan-400">ls</span> - List directory structure of the current node.</li>
+                </ul>
+              </div>
+              <div>
+                <span className="text-green-400 font-bold">[KEYBOARD SHORTCUTS]</span>
+                <ul className="list-disc ml-4 mt-1 space-y-1">
+                  <li><span className="text-cyan-400">TAB</span> - Autocomplete current command or service name.</li>
+                  <li><span className="text-cyan-400">UP/DOWN</span> - Cycle through previous command history.</li>
+                  <li><span className="text-cyan-400">ENTER</span> - Execute the current command line.</li>
+                </ul>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4">
