@@ -1,11 +1,78 @@
 import React, { useState, useEffect } from 'react';
+import { useTelemetry } from './TelemetryContext';
 
 /* ═══════════════════════════════════════════════════════
    LIVE DATA FEEDS
    Pulls from free, no-auth APIs:
    - Open-Meteo for weather
    - CoinGecko for crypto
+   - Various Telemetry (ISS, Node, USGS) via context
    ═══════════════════════════════════════════════════════ */
+
+function DeepSpaceFeed() {
+  const telemetry = useTelemetry();
+
+  if (!telemetry) return null;
+
+  const { iss, node, earthquakes } = telemetry;
+  const recentEq = earthquakes?.length > 0 ? earthquakes[0] : null;
+
+  return (
+    <div className="space-y-3">
+      {/* NODE ID */}
+      <div>
+        <div className="text-[10px] uppercase tracking-widest text-yellow-400/40 font-bold"
+          style={{ fontFamily: 'var(--font-display)' }}>
+          Client Node Uplink
+        </div>
+        {!node ? (
+          <div className="text-[11px] text-yellow-400/30 animate-pulse">Detecting origin...</div>
+        ) : (
+          <div className="text-[11px] text-yellow-400/60 space-y-0.5">
+            <div>IP: <span className="text-yellow-400 text-glow">{node.ip}</span></div>
+            <div>LOC: <span className="text-yellow-400 text-glow">{node.city}, {node.country_name}</span></div>
+            <div>LAT/LON: <span className="text-yellow-400 text-glow">{node.latitude?.toFixed(2)} / {node.longitude?.toFixed(2)}</span></div>
+          </div>
+        )}
+      </div>
+
+      {/* ISS TRACKER */}
+      <div>
+        <div className="text-[10px] uppercase tracking-widest text-red-400/40 font-bold"
+          style={{ fontFamily: 'var(--font-display)' }}>
+          Orbital Telemetry
+        </div>
+        {!iss ? (
+          <div className="text-[11px] text-red-400/30 animate-pulse">Tracking satellite...</div>
+        ) : (
+          <div className="text-[11px] text-red-400/60 space-y-0.5">
+            <div>ID: <span className="text-red-400 text-glow">ISS_ALPHA_1</span></div>
+            <div>ALT: <span className="text-red-400 text-glow">{Math.round(iss.altitude)} km</span></div>
+            <div>VEL: <span className="text-red-400 text-glow">{Math.round(iss.velocity)} km/h</span></div>
+            <div>COORD: <span className="text-red-400 text-glow">{iss.latitude?.toFixed(2)}, {iss.longitude?.toFixed(2)}</span></div>
+          </div>
+        )}
+      </div>
+
+      {/* SEISMIC */}
+      <div>
+        <div className="text-[10px] uppercase tracking-widest text-orange-400/40 font-bold"
+          style={{ fontFamily: 'var(--font-display)' }}>
+          Global Seismic
+        </div>
+        {!recentEq ? (
+          <div className="text-[11px] text-orange-400/30 animate-pulse">Monitoring sensors...</div>
+        ) : (
+          <div className="text-[11px] text-orange-400/60 space-y-0.5">
+            <div>EVENT: <span className="text-orange-400 text-glow">M {recentEq.properties.mag?.toFixed(1)}</span></div>
+            <div>LOC: <span className="text-orange-400 text-glow">{recentEq.properties.place}</span></div>
+            <div>TIME: <span className="text-orange-400 text-glow">{new Date(recentEq.properties.time).toLocaleTimeString()}</span></div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function WeatherFeed() {
   const [weather, setWeather] = useState(null);
@@ -16,7 +83,6 @@ function WeatherFeed() {
 
     async function fetchWeather() {
       try {
-        /* Using a generic location (Fremont) — easter egg */
         const res = await fetch(
           'https://api.open-meteo.com/v1/forecast?latitude=37.5483&longitude=-121.9886&current=temperature_2m,wind_speed_10m,relative_humidity_2m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph'
         );
@@ -30,7 +96,7 @@ function WeatherFeed() {
     }
 
     fetchWeather();
-    const id = setInterval(fetchWeather, 120000); // Refresh every 2 min
+    const id = setInterval(fetchWeather, 120000);
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
@@ -85,7 +151,7 @@ function CryptoFeed() {
     }
 
     fetchPrices();
-    const id = setInterval(fetchPrices, 60000); // Refresh every 60s
+    const id = setInterval(fetchPrices, 60000);
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
@@ -129,6 +195,8 @@ function CryptoFeed() {
 export default function LiveFeeds() {
   return (
     <div className="border-glow bg-black/60 p-3 space-y-4">
+      <DeepSpaceFeed />
+      <div className="border-t border-green-500/10" />
       <WeatherFeed />
       <div className="border-t border-green-500/10" />
       <CryptoFeed />

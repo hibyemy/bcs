@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import BootSequence from './components/BootSequence';
 import Dashboard from './components/Dashboard';
+import { TelemetryProvider } from './components/TelemetryContext';
 
 export default function App() {
   const [isBooting, setIsBooting] = useState(() => {
@@ -18,5 +19,9 @@ export default function App() {
     );
   }
 
-  return <Dashboard />;
+  return (
+    <TelemetryProvider>
+      <Dashboard />
+    </TelemetryProvider>
+  );
 }
