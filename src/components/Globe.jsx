@@ -398,71 +398,88 @@ export default function Globe() {
 
   }, [telemetry, isExpanded]);
 
-  // Wrapper classes depend on expanded state
-  const wrapperClass = isExpanded
-    ? "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-10"
-    : "border-glow bg-black/60 p-3 flex flex-col relative overflow-hidden group cursor-pointer hover:border-green-500/50 transition-colors";
+  const overlayClass = isExpanded
+    ? "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-10 pointer-events-auto"
+    : "relative w-full h-full group cursor-pointer";
+
+  const windowClass = isExpanded
+    ? "w-full max-w-4xl border border-green-500/50 bg-black/95 shadow-[0_0_40px_rgba(34,197,94,0.15)] flex flex-col relative"
+    : "border-glow bg-black/60 p-3 flex flex-col relative overflow-hidden h-full hover:border-green-500/50 transition-colors";
 
   const containerClass = isExpanded
-    ? "w-full max-w-4xl aspect-square relative"
+    ? "w-full aspect-square relative"
     : "w-full aspect-square max-h-[400px] relative";
 
   return (
-    <div className={wrapperClass} onClick={() => !isExpanded && setIsExpanded(true)}>
-      
-      {isExpanded && (
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsExpanded(false);
-          }}
-          className="absolute top-6 right-6 text-green-500/50 hover:text-green-400 text-[10px] uppercase tracking-widest border border-green-500/20 px-4 py-2 bg-black/50 z-50 hover:border-green-500/50"
-        >
-          [CLOSE_UPLINK]
-        </button>
-      )}
-
-      {/* When not expanded, show a hint */}
-      {!isExpanded && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-           <div className="bg-black/80 px-3 py-1 border border-green-500/40 text-[10px] text-green-400 uppercase tracking-widest animate-pulse">
-             CLICK_TO_EXPAND
-           </div>
-        </div>
-      )}
-
-      <div className="w-full flex flex-col">
-        <div
-          className="text-[10px] uppercase tracking-widest text-green-500/60 mb-2 font-bold relative z-10"
-          style={{ fontFamily: 'var(--font-display)' }}
-        >
-          Global Uplink — Network Topology {isExpanded && '(ACTIVE)'}
-        </div>
+    <div 
+      className={overlayClass} 
+      onClick={() => {
+        if (!isExpanded) setIsExpanded(true);
+        else setIsExpanded(false); // Close when clicking backdrop
+      }}
+    >
+      <div className={windowClass} onClick={(e) => isExpanded && e.stopPropagation()}>
         
-        <div ref={mountRef} className={containerClass}>
-          {/* Overlay labels */}
-          <div className="absolute top-2 right-2 text-[9px] text-cyan-400/50 text-glow-cyan space-y-0.5 pointer-events-none">
-            <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 bg-white rounded-full"></div> HOST_ORIGIN</div>
-            <div className="flex items-center gap-1 mt-1"><div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div> EDGE_NODES</div>
-            {telemetry?.iss && (
-              <div className="flex items-center gap-1 mt-1 text-red-400/70 text-glow-none">
-                <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div> ISS_ORBIT
-              </div>
-            )}
-            {telemetry?.node && (
-              <div className="flex items-center gap-1 mt-1 text-yellow-400/70 text-glow-none">
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></div> NODE_DETECTED
-              </div>
-            )}
-            {telemetry?.earthquakes?.length > 0 && (
-              <div className="flex items-center gap-1 mt-1 text-orange-400/70 text-glow-none">
-                <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div> SEISMIC_ACTIVITY
-              </div>
-            )}
+        {/* Retro Title Bar */}
+        {isExpanded ? (
+          <div className="border-b border-green-500/50 bg-green-900/20 px-3 py-2 flex items-center justify-between">
+            <div className="text-[10px] text-green-400 font-bold uppercase tracking-widest flex items-center gap-2" style={{ fontFamily: 'var(--font-display)' }}>
+              <span className="w-2 h-2 bg-green-500 rounded-sm animate-pulse"></span>
+              BCS_SYS:// Global Uplink
+            </div>
+            <button 
+              onClick={() => setIsExpanded(false)}
+              className="text-[10px] text-green-400 hover:bg-green-500 hover:text-black border border-green-500/50 px-2 py-0.5 transition-colors"
+            >
+              [X]
+            </button>
           </div>
-          <div className="absolute bottom-2 left-2 text-[9px] text-green-500/30 pointer-events-none">
-            ACTIVE REGION: {telemetry?.node?.continent_code || 'SCANNING'} &nbsp;|&nbsp; ROUTE_ESTABLISHED
+        ) : (
+          <div
+            className="text-[10px] uppercase tracking-widest text-green-500/60 mb-2 font-bold relative z-10"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            Global Uplink — Network Topology
           </div>
+        )}
+
+        {/* When not expanded, show a hint */}
+        {!isExpanded && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+             <div className="bg-black/80 px-3 py-1 border border-green-500/40 text-[10px] text-green-400 uppercase tracking-widest animate-pulse">
+               CLICK_TO_EXPAND
+             </div>
+          </div>
+        )}
+
+        <div className={isExpanded ? "p-4 relative" : "w-full flex flex-col relative flex-1"}>
+          
+          <div ref={mountRef} className={containerClass}>
+            {/* Overlay labels */}
+            <div className="absolute top-2 right-2 text-[9px] text-cyan-400/50 text-glow-cyan space-y-0.5 pointer-events-none">
+              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 bg-white rounded-full"></div> HOST_ORIGIN</div>
+              <div className="flex items-center gap-1 mt-1"><div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div> EDGE_NODES</div>
+              {telemetry?.iss && (
+                <div className="flex items-center gap-1 mt-1 text-red-400/70 text-glow-none">
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div> ISS_ORBIT
+                </div>
+              )}
+              {telemetry?.node && (
+                <div className="flex items-center gap-1 mt-1 text-yellow-400/70 text-glow-none">
+                  <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></div> NODE_DETECTED
+                </div>
+              )}
+              {telemetry?.earthquakes?.length > 0 && (
+                <div className="flex items-center gap-1 mt-1 text-orange-400/70 text-glow-none">
+                  <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div> SEISMIC_ACTIVITY
+                </div>
+              )}
+            </div>
+            <div className="absolute bottom-2 left-2 text-[9px] text-green-500/30 pointer-events-none">
+              ACTIVE REGION: {telemetry?.node?.continent_code || 'SCANNING'} &nbsp;|&nbsp; ROUTE_ESTABLISHED
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
