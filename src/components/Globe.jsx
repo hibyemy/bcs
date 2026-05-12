@@ -9,6 +9,7 @@ export default function Globe() {
   const issMeshRef = useRef(null);
   const nodeMeshRef = useRef(null);
   const eqGroupRef = useRef(null);
+  const userArcRef = useRef(null);
 
   const telemetry = useTelemetry();
 
@@ -16,16 +17,14 @@ export default function Globe() {
   const nodes = useMemo(() => {
     const pts = [];
     const cities = [
-      { lat: 37.77, lng: -122.42, label: 'SFO' },
-      { lat: 51.51, lng: -0.13,   label: 'LON' },
-      { lat: 35.68, lng: 139.69,  label: 'TYO' },
-      { lat: -33.87, lng: 151.21, label: 'SYD' },
-      { lat: 48.86, lng: 2.35,    label: 'PAR' },
-      { lat: 55.76, lng: 37.62,   label: 'MOW' },
-      { lat: 1.35,  lng: 103.82,  label: 'SIN' },
-      { lat: -23.55, lng: -46.63, label: 'SAO' },
-      { lat: 40.71, lng: -74.01,  label: 'NYC' },
-      { lat: 30.04, lng: 31.24,   label: 'CAI' },
+      { lat: 37.77, lng: -122.42, label: 'CF-SFO (HOST)' }, // Bay Area Host
+      { lat: 39.04, lng: -77.48,  label: 'CF-IAD' },        // Ashburn
+      { lat: 51.47, lng: -0.45,   label: 'CF-LHR' },        // London
+      { lat: 50.03, lng: 8.57,    label: 'CF-FRA' },        // Frankfurt
+      { lat: 35.76, lng: 140.38,  label: 'CF-NRT' },        // Tokyo
+      { lat: -33.94, lng: 151.17, label: 'CF-SYD' },        // Sydney
+      { lat: 1.35,  lng: 103.98,  label: 'CF-SIN' },        // Singapore
+      { lat: -23.43, lng: -46.47, label: 'CF-GRU' },        // Sao Paulo
     ];
     for (const c of cities) {
       const phi = (90 - c.lat) * (Math.PI / 180);
@@ -88,6 +87,11 @@ export default function Globe() {
     const eqGroup = new THREE.Group();
     scene.add(eqGroup);
     eqGroupRef.current = eqGroup;
+
+    // 4. User Connection Arc Group
+    const userArcGroup = new THREE.Group();
+    scene.add(userArcGroup);
+    userArcRef.current = userArcGroup;
 
     /* ── Wireframe sphere ──────────────────────── */
     const sphereGeo = new THREE.SphereGeometry(1, 32, 32);
@@ -247,6 +251,44 @@ export default function Globe() {
       const { x, y, z } = toCoords(telemetry.node.latitude, telemetry.node.longitude, 1.03);
       nodeMeshRef.current.position.set(x, y, z);
       nodeMeshRef.current.visible = true;
+
+      if (userArcRef.current) {
+        while(userArcRef.current.children.length > 0){ 
+            userArcRef.current.remove(userArcRef.current.children[0]); 
+        }
+
+        const hostLat = 37.77; // Bay Area
+        const hostLng = -122.42;
+        const userLat = telemetry.node.latitude;
+        const userLng = telemetry.node.longitude;
+
+        const p1 = toCoords(hostLat, hostLng, 1.02);
+        const p2 = toCoords(userLat, userLng, 1.02);
+        
+        const v1 = new THREE.Vector3(p1.x, p1.y, p1.z);
+        const v2 = new THREE.Vector3(p2.x, p2.y, p2.z);
+        
+        // Calculate curve height based on distance
+        const dist = v1.distanceTo(v2);
+        const curveHeight = 1 + (dist * 0.5);
+
+        const mid = new THREE.Vector3(
+          (v1.x + v2.x) * 0.5 * curveHeight,
+          (v1.y + v2.y) * 0.5 * curveHeight,
+          (v1.z + v2.z) * 0.5 * curveHeight
+        );
+
+        const curve = new THREE.QuadraticBezierCurve3(v1, mid, v2);
+        const pts = curve.getPoints(40);
+        const arcGeo = new THREE.BufferGeometry().setFromPoints(pts);
+        const arcMat = new THREE.LineBasicMaterial({
+          color: 0xffea00, // Match user node color
+          transparent: true,
+          opacity: 0.6,
+        });
+        const arcLine = new THREE.Line(arcGeo, arcMat);
+        userArcRef.current.add(arcLine);
+      }
     }
 
     if (telemetry.earthquakes && eqGroupRef.current) {
@@ -288,7 +330,7 @@ export default function Globe() {
       <div ref={mountRef} className="w-full aspect-square max-h-[400px] relative">
         {/* Overlay labels */}
         <div className="absolute top-2 right-2 text-[9px] text-cyan-400/50 text-glow-cyan space-y-0.5 pointer-events-none">
-          <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div> STATIC NODES</div>
+          <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div> EDGE_NODES</div>
           {telemetry?.iss && (
             <div className="flex items-center gap-1 mt-1 text-red-400/70 text-glow-none">
               <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div> ISS_ORBIT
@@ -306,7 +348,7 @@ export default function Globe() {
           )}
         </div>
         <div className="absolute bottom-2 left-2 text-[9px] text-green-500/30 pointer-events-none">
-          NODES: 10 &nbsp;|&nbsp; LINKS: 6
+          NODES: 8 &nbsp;|&nbsp; LINKS: {telemetry?.node ? 7 : 6}
         </div>
       </div>
     </div>
