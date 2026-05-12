@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react';
 import CommandConsole from './CommandConsole';
-import Globe from './Globe';
 import SubSystemView from './SubSystemView';
-import LiveFeeds from './LiveFeeds';
+
+const Globe = lazy(() => import('./Globe'));
+const LiveFeeds = lazy(() => import('./LiveFeeds'));
 import SettingsPanel from './SettingsPanel';
 import GuidePanel from './GuidePanel';
 import NetworkStats from './NetworkStats';
@@ -465,13 +466,21 @@ export default function Dashboard() {
             <SystemStats />
 
             {/* Live Feeds */}
-            {features.livefeeds && <LiveFeeds />}
+            {features.livefeeds && (
+              <Suspense fallback={<div className="border-glow bg-black/60 p-3 h-64 flex items-center justify-center text-green-500 animate-pulse text-[10px] tracking-widest">[LOADING_MODULE: LIVE_FEEDS]</div>}>
+                <LiveFeeds />
+              </Suspense>
+            )}
           </div>
 
           {/* ── Right column ──────────────────────── */}
           <div className="lg:col-span-1 space-y-4">
             {/* Globe */}
-            {features.globe && <Globe />}
+            {features.globe && (
+              <Suspense fallback={<div className="border-glow bg-black/60 p-3 aspect-square max-h-[400px] flex items-center justify-center text-green-500 animate-pulse text-[10px] tracking-widest">[INITIALIZING_3D_ENGINE]</div>}>
+                <Globe />
+              </Suspense>
+            )}
 
             {/* Activity log */}
             <div className="h-[300px]">

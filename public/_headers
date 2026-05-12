@@ -1,0 +1,2 @@
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://ipapi.co https://api.wheretheiss.at https://earthquake.usgs.gov; img-src 'self' data:; object-src 'none'; base-uri 'self';
