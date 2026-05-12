@@ -2,40 +2,49 @@ import React, { useRef, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useTelemetry } from './TelemetryContext';
 
+// Helper: Lat/Lng to ThreeJS vector (y is up)
+const toCoords = (lat, lng, radius = 1.02) => {
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lng + 180) * (Math.PI / 180);
+  const x = -radius * Math.sin(phi) * Math.cos(theta);
+  const y = radius * Math.cos(phi);
+  const z = radius * Math.sin(phi) * Math.sin(theta);
+  return { x, y, z };
+};
+
+// Helper: Distance between two lat/lng points
+const getDist = (lat1, lon1, lat2, lon2) => {
+  const p = 0.017453292519943295;
+  const c = Math.cos;
+  const a = 0.5 - c((lat2 - lat1) * p) / 2 + c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p)) / 2;
+  return 12742 * Math.asin(Math.sqrt(a));
+};
+
 export default function Globe() {
   const mountRef = useRef(null);
   const frameRef = useRef(null);
+  
   const sceneRef = useRef(null);
   const issMeshRef = useRef(null);
   const nodeMeshRef = useRef(null);
   const eqGroupRef = useRef(null);
   const userArcRef = useRef(null);
+  const edgeNodesRef = useRef({});
 
   const telemetry = useTelemetry();
 
-  /* Memoize node data so it doesn't regenerate */
-  const nodes = useMemo(() => {
-    const pts = [];
-    const cities = [
-      { lat: 37.77, lng: -122.42, label: 'CF-SFO (HOST)' }, // Bay Area Host
-      { lat: 39.04, lng: -77.48,  label: 'CF-IAD' },        // Ashburn
-      { lat: 51.47, lng: -0.45,   label: 'CF-LHR' },        // London
-      { lat: 50.03, lng: 8.57,    label: 'CF-FRA' },        // Frankfurt
-      { lat: 35.76, lng: 140.38,  label: 'CF-NRT' },        // Tokyo
-      { lat: -33.94, lng: 151.17, label: 'CF-SYD' },        // Sydney
-      { lat: 1.35,  lng: 103.98,  label: 'CF-SIN' },        // Singapore
-      { lat: -23.43, lng: -46.47, label: 'CF-GRU' },        // Sao Paulo
-    ];
-    for (const c of cities) {
-      const phi = (90 - c.lat) * (Math.PI / 180);
-      const theta = (c.lng + 180) * (Math.PI / 180);
-      const x = -1.02 * Math.sin(phi) * Math.cos(theta);
-      const y = 1.02 * Math.cos(phi);
-      const z = 1.02 * Math.sin(phi) * Math.sin(theta);
-      pts.push({ x, y, z, label: c.label });
-    }
-    return pts;
-  }, []);
+  const EDGE_NODES = useMemo(() => [
+    { id: 'SFO', lat: 37.77, lng: -122.42, label: 'CF-SFO', continent: 'NA' },
+    { id: 'IAD', lat: 39.04, lng: -77.48,  label: 'CF-IAD', continent: 'NA' },
+    { id: 'LHR', lat: 51.47, lng: -0.45,   label: 'CF-LHR', continent: 'EU' },
+    { id: 'FRA', lat: 50.03, lng: 8.57,    label: 'CF-FRA', continent: 'EU' },
+    { id: 'NRT', lat: 35.76, lng: 140.38,  label: 'CF-NRT', continent: 'AS' },
+    { id: 'SIN', lat: 1.35,  lng: 103.98,  label: 'CF-SIN', continent: 'AS' },
+    { id: 'SYD', lat: -33.94, lng: 151.17, label: 'CF-SYD', continent: 'OC' },
+    { id: 'GRU', lat: -23.43, lng: -46.47, label: 'CF-GRU', continent: 'SA' },
+  ], []);
+
+  const ORIGIN = { lat: 37.55, lng: -121.98, label: 'ORIGIN' }; // Fremont / Bay Area
 
   useEffect(() => {
     const container = mountRef.current;
@@ -57,7 +66,7 @@ export default function Globe() {
     container.appendChild(renderer.domElement);
 
     /* ── Dynamic telemetry meshes ──────────────── */
-    // 1. ISS (Red, larger glow, orbits slightly higher)
+    // 1. ISS (Red, larger glow)
     const issGeo = new THREE.SphereGeometry(0.02, 8, 8);
     const issMat = new THREE.MeshBasicMaterial({ color: 0xff3333 });
     const issMesh = new THREE.Mesh(issGeo, issMat);
@@ -70,7 +79,7 @@ export default function Globe() {
     scene.add(issMesh);
     issMeshRef.current = issMesh;
 
-    // 2. Node (Yellow, current location)
+    // 2. User Node (Yellow)
     const nodeGeo = new THREE.SphereGeometry(0.025, 8, 8);
     const nodeMat = new THREE.MeshBasicMaterial({ color: 0xffea00 });
     const nodeMesh = new THREE.Mesh(nodeGeo, nodeMat);
@@ -88,10 +97,23 @@ export default function Globe() {
     scene.add(eqGroup);
     eqGroupRef.current = eqGroup;
 
-    // 4. User Connection Arc Group
+    // 4. Connection Arcs Group
     const userArcGroup = new THREE.Group();
     scene.add(userArcGroup);
     userArcRef.current = userArcGroup;
+
+    // 5. Origin Server (White)
+    const originGeo = new THREE.SphereGeometry(0.02, 8, 8);
+    const originMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const originMesh = new THREE.Mesh(originGeo, originMat);
+    const oPos = toCoords(ORIGIN.lat, ORIGIN.lng, 1.02);
+    originMesh.position.set(oPos.x, oPos.y, oPos.z);
+    const originGlow = new THREE.Mesh(
+      new THREE.SphereGeometry(0.05, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 })
+    );
+    originMesh.add(originGlow);
+    scene.add(originMesh);
 
     /* ── Wireframe sphere ──────────────────────── */
     const sphereGeo = new THREE.SphereGeometry(1, 32, 32);
@@ -111,14 +133,14 @@ export default function Globe() {
       opacity: 0.35,
     });
 
-    const eqGeo = new THREE.BufferGeometry();
+    const eqGeoBuffer = new THREE.BufferGeometry();
     const eqPts = [];
     for (let i = 0; i <= 128; i++) {
       const a = (i / 128) * Math.PI * 2;
       eqPts.push(Math.cos(a), 0, Math.sin(a));
     }
-    eqGeo.setAttribute('position', new THREE.Float32BufferAttribute(eqPts, 3));
-    scene.add(new THREE.Line(eqGeo, ringMat));
+    eqGeoBuffer.setAttribute('position', new THREE.Float32BufferAttribute(eqPts, 3));
+    scene.add(new THREE.Line(eqGeoBuffer, ringMat));
 
     const pmGeo = new THREE.BufferGeometry();
     const pmPts = [];
@@ -129,51 +151,25 @@ export default function Globe() {
     pmGeo.setAttribute('position', new THREE.Float32BufferAttribute(pmPts, 3));
     scene.add(new THREE.Line(pmGeo, ringMat));
 
-    /* ── Node dots (Static Cities) ─────────────── */
+    /* ── Edge Nodes ────────────────────────────── */
     const dotGeo = new THREE.SphereGeometry(0.02, 8, 8);
     const dotMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4 });
     const glowGeo = new THREE.SphereGeometry(0.04, 8, 8);
-    const glowMat = new THREE.MeshBasicMaterial({
-      color: 0x06b6d4,
-      transparent: true,
-      opacity: 0.25,
-    });
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.25 });
 
-    for (const n of nodes) {
+    EDGE_NODES.forEach(n => {
+      const group = new THREE.Group();
       const dot = new THREE.Mesh(dotGeo, dotMat);
-      dot.position.set(n.x, n.y, n.z);
-      scene.add(dot);
-
       const glow = new THREE.Mesh(glowGeo, glowMat);
-      glow.position.set(n.x, n.y, n.z);
-      scene.add(glow);
-    }
+      group.add(dot);
+      group.add(glow);
 
-    /* ── Connection arcs ───────────────────────── */
-    const arcMat = new THREE.LineBasicMaterial({
-      color: 0x06b6d4,
-      transparent: true,
-      opacity: 0.2,
+      const pos = toCoords(n.lat, n.lng, 1.02);
+      group.position.set(pos.x, pos.y, pos.z);
+      scene.add(group);
+
+      edgeNodesRef.current[n.id] = { group, data: n };
     });
-
-    for (let i = 0; i < 6; i++) {
-      const a = nodes[Math.floor(Math.random() * nodes.length)];
-      const b = nodes[Math.floor(Math.random() * nodes.length)];
-      if (a === b) continue;
-
-      const curve = new THREE.QuadraticBezierCurve3(
-        new THREE.Vector3(a.x, a.y, a.z),
-        new THREE.Vector3(
-          (a.x + b.x) * 0.5 * 1.5,
-          (a.y + b.y) * 0.5 * 1.5,
-          (a.z + b.z) * 0.5 * 1.5
-        ),
-        new THREE.Vector3(b.x, b.y, b.z)
-      );
-      const pts = curve.getPoints(40);
-      const arcGeo = new THREE.BufferGeometry().setFromPoints(pts);
-      scene.add(new THREE.Line(arcGeo, arcMat));
-    }
 
     /* ── Ambient particles ─────────────────────── */
     const particleCount = 200;
@@ -194,17 +190,7 @@ export default function Globe() {
     /* ── Animate ───────────────────────────────── */
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate);
-      
-      // We rotate the main sphere structure, BUT we also want to rotate our dynamic telemetry.
-      // Easiest is to rotate the entire scene slowly, or group the nodes.
-      // But rotating the scene also rotates the camera's perspective of the background.
-      // So let's rotate the meshes explicitly or group them.
-      
-      // Let's group all earth-bound things
-      // Wait, currently they are added to `scene` directly.
-      // If we just rotate the scene, everything turns.
       scene.rotation.y += 0.002;
-      
       renderer.render(scene, camera);
     };
     animate();
@@ -225,95 +211,109 @@ export default function Globe() {
       renderer.dispose();
       container.removeChild(renderer.domElement);
     };
-  }, [nodes]);
+  }, [EDGE_NODES]);
 
   /* ── Effect to update dynamic telemetry positions ── */
   useEffect(() => {
     if (!telemetry) return;
 
-    // Helper: Lat/Lng to ThreeJS vector (y is up)
-    const toCoords = (lat, lng, radius = 1.02) => {
-      const phi = (90 - lat) * (Math.PI / 180);
-      const theta = (lng + 180) * (Math.PI / 180);
-      const x = -radius * Math.sin(phi) * Math.cos(theta);
-      const y = radius * Math.cos(phi);
-      const z = radius * Math.sin(phi) * Math.sin(theta);
-      return { x, y, z };
-    };
-
     if (telemetry.iss && issMeshRef.current) {
-      const { x, y, z } = toCoords(telemetry.iss.latitude, telemetry.iss.longitude, 1.06); // Orbits higher
+      const { x, y, z } = toCoords(telemetry.iss.latitude, telemetry.iss.longitude, 1.06); 
       issMeshRef.current.position.set(x, y, z);
       issMeshRef.current.visible = true;
     }
 
+    if (telemetry.earthquakes && eqGroupRef.current) {
+      while(eqGroupRef.current.children.length > 0){ 
+          eqGroupRef.current.remove(eqGroupRef.current.children[0]); 
+      }
+      const eqGeo = new THREE.SphereGeometry(0.015, 8, 8);
+      const eqMat = new THREE.MeshBasicMaterial({ color: 0xffa500 });
+      
+      telemetry.earthquakes.slice(0, 10).forEach(eq => {
+         const coords = eq.geometry.coordinates; 
+         const { x, y, z } = toCoords(coords[1], coords[0], 1.02);
+         const mesh = new THREE.Mesh(eqGeo, eqMat);
+         mesh.position.set(x, y, z);
+         const mag = eq.properties.mag || 1;
+         const scale = Math.max(0.5, mag * 0.4);
+         mesh.scale.set(scale, scale, scale);
+         eqGroupRef.current.add(mesh);
+      });
+    }
+
+    // Node & Routing Logic
     if (telemetry.node && nodeMeshRef.current) {
-      const { x, y, z } = toCoords(telemetry.node.latitude, telemetry.node.longitude, 1.03);
+      const userLat = telemetry.node.latitude;
+      const userLng = telemetry.node.longitude;
+      const userContinent = telemetry.node.continent_code || 'NA';
+
+      // 1. Position User Node
+      const { x, y, z } = toCoords(userLat, userLng, 1.03);
       nodeMeshRef.current.position.set(x, y, z);
       nodeMeshRef.current.visible = true;
 
-      if (userArcRef.current) {
+      // 2. Hide Edge Nodes not in continent (Except SFO which is Host Edge)
+      Object.values(edgeNodesRef.current).forEach(({ group, data }) => {
+        if (data.id === 'SFO') {
+          group.visible = true; // Always show host edge
+        } else if (data.continent === userContinent) {
+          group.visible = true;
+        } else {
+          group.visible = false;
+        }
+      });
+
+      // 3. Find Closest Edge Node for the User
+      let closestEdge = null;
+      let minDist = Infinity;
+      Object.values(edgeNodesRef.current).forEach(({ data }) => {
+        const d = getDist(userLat, userLng, data.lat, data.lng);
+        if (d < minDist) {
+          minDist = d;
+          closestEdge = data;
+        }
+      });
+
+      // 4. Draw Routing Arcs: Origin -> SFO -> Closest Edge -> User
+      if (userArcRef.current && closestEdge) {
         while(userArcRef.current.children.length > 0){ 
             userArcRef.current.remove(userArcRef.current.children[0]); 
         }
 
-        const hostLat = 37.77; // Bay Area
-        const hostLng = -122.42;
-        const userLat = telemetry.node.latitude;
-        const userLng = telemetry.node.longitude;
+        const drawArc = (lat1, lng1, lat2, lng2, color, opacity, heightMult) => {
+          if (lat1 === lat2 && lng1 === lng2) return;
+          const p1 = toCoords(lat1, lng1, 1.02);
+          const p2 = toCoords(lat2, lng2, 1.02);
+          const v1 = new THREE.Vector3(p1.x, p1.y, p1.z);
+          const v2 = new THREE.Vector3(p2.x, p2.y, p2.z);
+          
+          const dist = v1.distanceTo(v2);
+          if (dist < 0.01) return; // Too close
 
-        const p1 = toCoords(hostLat, hostLng, 1.02);
-        const p2 = toCoords(userLat, userLng, 1.02);
+          const curveHeight = 1 + (dist * heightMult);
+          const mid = new THREE.Vector3(
+            (v1.x + v2.x) * 0.5 * curveHeight,
+            (v1.y + v2.y) * 0.5 * curveHeight,
+            (v1.z + v2.z) * 0.5 * curveHeight
+          );
+
+          const curve = new THREE.QuadraticBezierCurve3(v1, mid, v2);
+          const pts = curve.getPoints(40);
+          const arcGeo = new THREE.BufferGeometry().setFromPoints(pts);
+          const arcMat = new THREE.LineBasicMaterial({ color, transparent: true, opacity });
+          userArcRef.current.add(new THREE.Line(arcGeo, arcMat));
+        };
+
+        // Origin -> SFO
+        drawArc(ORIGIN.lat, ORIGIN.lng, 37.77, -122.42, 0xffffff, 0.4, 0.2);
         
-        const v1 = new THREE.Vector3(p1.x, p1.y, p1.z);
-        const v2 = new THREE.Vector3(p2.x, p2.y, p2.z);
-        
-        // Calculate curve height based on distance
-        const dist = v1.distanceTo(v2);
-        const curveHeight = 1 + (dist * 0.5);
+        // SFO -> Closest Edge
+        drawArc(37.77, -122.42, closestEdge.lat, closestEdge.lng, 0x06b6d4, 0.6, 0.4);
 
-        const mid = new THREE.Vector3(
-          (v1.x + v2.x) * 0.5 * curveHeight,
-          (v1.y + v2.y) * 0.5 * curveHeight,
-          (v1.z + v2.z) * 0.5 * curveHeight
-        );
-
-        const curve = new THREE.QuadraticBezierCurve3(v1, mid, v2);
-        const pts = curve.getPoints(40);
-        const arcGeo = new THREE.BufferGeometry().setFromPoints(pts);
-        const arcMat = new THREE.LineBasicMaterial({
-          color: 0xffea00, // Match user node color
-          transparent: true,
-          opacity: 0.6,
-        });
-        const arcLine = new THREE.Line(arcGeo, arcMat);
-        userArcRef.current.add(arcLine);
+        // Closest Edge -> User
+        drawArc(closestEdge.lat, closestEdge.lng, userLat, userLng, 0xffea00, 0.8, 0.2);
       }
-    }
-
-    if (telemetry.earthquakes && eqGroupRef.current) {
-      // Clear old EQ meshes
-      while(eqGroupRef.current.children.length > 0){ 
-          eqGroupRef.current.remove(eqGroupRef.current.children[0]); 
-      }
-      
-      const eqGeo = new THREE.SphereGeometry(0.015, 8, 8);
-      const eqMat = new THREE.MeshBasicMaterial({ color: 0xffa500 }); // Orange for seismic
-      
-      // Top 10 most recent
-      telemetry.earthquakes.slice(0, 10).forEach(eq => {
-         const coords = eq.geometry.coordinates; // [lng, lat, depth]
-         const { x, y, z } = toCoords(coords[1], coords[0], 1.02);
-         
-         const mesh = new THREE.Mesh(eqGeo, eqMat);
-         mesh.position.set(x, y, z);
-         
-         const mag = eq.properties.mag || 1;
-         const scale = Math.max(0.5, mag * 0.4);
-         mesh.scale.set(scale, scale, scale);
-         
-         eqGroupRef.current.add(mesh);
-      });
     }
 
   }, [telemetry]);
@@ -330,7 +330,8 @@ export default function Globe() {
       <div ref={mountRef} className="w-full aspect-square max-h-[400px] relative">
         {/* Overlay labels */}
         <div className="absolute top-2 right-2 text-[9px] text-cyan-400/50 text-glow-cyan space-y-0.5 pointer-events-none">
-          <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div> EDGE_NODES</div>
+          <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 bg-white rounded-full"></div> HOST_ORIGIN</div>
+          <div className="flex items-center gap-1 mt-1"><div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div> EDGE_NODES</div>
           {telemetry?.iss && (
             <div className="flex items-center gap-1 mt-1 text-red-400/70 text-glow-none">
               <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div> ISS_ORBIT
@@ -348,7 +349,7 @@ export default function Globe() {
           )}
         </div>
         <div className="absolute bottom-2 left-2 text-[9px] text-green-500/30 pointer-events-none">
-          NODES: 8 &nbsp;|&nbsp; LINKS: {telemetry?.node ? 7 : 6}
+          ACTIVE REGION: {telemetry?.node?.continent_code || 'SCANNING'} &nbsp;|&nbsp; ROUTE_ESTABLISHED
         </div>
       </div>
     </div>

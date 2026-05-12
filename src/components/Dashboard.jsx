@@ -6,6 +6,7 @@ import LiveFeeds from './LiveFeeds';
 import SettingsPanel from './SettingsPanel';
 import GuidePanel from './GuidePanel';
 import NetworkStats from './NetworkStats';
+import { TelemetryProvider } from './TelemetryContext';
 
 /* ── Tiny helper: random hex chars ──────────────────── */
 function randHex(len = 8) {
@@ -282,7 +283,8 @@ export default function Dashboard() {
   ));
 
   return (
-    <div className="min-h-screen w-full bg-black grid-bg scanlines relative overflow-hidden">
+    <TelemetryProvider enabled={features.livefeeds || features.globe}>
+      <div className="min-h-screen w-full bg-black grid-bg scanlines relative overflow-hidden">
 
       {/* ── Matrix rain background ────────────────── */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -497,5 +499,6 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+    </TelemetryProvider>
   );
 }

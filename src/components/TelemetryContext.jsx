@@ -6,7 +6,7 @@ export function useTelemetry() {
   return useContext(TelemetryContext);
 }
 
-export function TelemetryProvider({ children }) {
+export function TelemetryProvider({ children, enabled = true }) {
   const [telemetry, setTelemetry] = useState({
     iss: null,
     node: null,
@@ -14,6 +14,8 @@ export function TelemetryProvider({ children }) {
   });
 
   useEffect(() => {
+    if (!enabled) return;
+
     let active = true;
 
     // 1. IP / Node
@@ -32,7 +34,7 @@ export function TelemetryProvider({ children }) {
     fetchIss();
     const issTimer = setInterval(fetchIss, 3000);
 
-    // 3. Earthquakes (Past hour)
+    // 3. Earthquakes
     const fetchEq = () => {
       fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson')
         .then(r => r.json())
@@ -47,7 +49,7 @@ export function TelemetryProvider({ children }) {
       clearInterval(issTimer);
       clearInterval(eqTimer);
     };
-  }, []);
+  }, [enabled]);
 
   return (
     <TelemetryContext.Provider value={telemetry}>
