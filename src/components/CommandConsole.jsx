@@ -223,20 +223,29 @@ export default function CommandConsole({ uptimeSeconds = 0, onDrillDown }) {
 
       <form onSubmit={handleSubmit} className="flex items-center gap-1 px-3 pb-3 border-t border-green-500/10 pt-2">
         <span className="text-[11px] text-green-500/50 text-glow shrink-0">root@bcs-gateway:~#</span>
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={isProcessing}
-          className="flex-1 bg-transparent text-[11px] text-green-400 text-glow outline-none border-none caret-green-400 font-mono"
-          autoFocus
-          spellCheck={false}
-          autoComplete="off"
-        />
-        {!isProcessing && <span className="cursor-blink text-green-400 text-[11px]">▌</span>}
-        {isProcessing && <span className="animate-pulse text-green-400 text-[11px]">⠿</span>}
+        <div className="relative flex-1 flex items-center min-w-0">
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isProcessing}
+            className="w-full bg-transparent text-[11px] text-green-400 text-glow outline-none border-none caret-transparent font-mono relative z-10"
+            autoFocus
+            spellCheck={false}
+            autoComplete="off"
+          />
+          {/* Custom Cursor Overlay */}
+          <div 
+            className="absolute left-0 top-0 h-full flex items-center pointer-events-none text-[11px] font-mono whitespace-pre z-0"
+            aria-hidden="true"
+          >
+            <span className="text-transparent">{input}</span>
+            {!isProcessing && <span className="text-green-400 cursor-blink">▌</span>}
+            {isProcessing && <span className="text-green-400 animate-pulse">⠿</span>}
+          </div>
+        </div>
       </form>
     </div>
   );

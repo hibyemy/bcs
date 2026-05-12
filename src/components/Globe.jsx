@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import * as THREE from 'three';
 import { useTelemetry } from './TelemetryContext';
 
@@ -30,18 +30,38 @@ export default function Globe() {
   const eqGroupRef = useRef(null);
   const userArcRef = useRef(null);
   const edgeNodesRef = useRef({});
+  const needsUpdateRef = useRef(true);
+
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isExpandedRef = useRef(isExpanded);
+
+  useEffect(() => {
+    isExpandedRef.current = isExpanded;
+    needsUpdateRef.current = true; // Force render on toggle
+  }, [isExpanded]);
 
   const telemetry = useTelemetry();
 
   const EDGE_NODES = useMemo(() => [
-    { id: 'SFO', lat: 37.77, lng: -122.42, label: 'CF-SFO', continent: 'NA' },
-    { id: 'IAD', lat: 39.04, lng: -77.48,  label: 'CF-IAD', continent: 'NA' },
-    { id: 'LHR', lat: 51.47, lng: -0.45,   label: 'CF-LHR', continent: 'EU' },
-    { id: 'FRA', lat: 50.03, lng: 8.57,    label: 'CF-FRA', continent: 'EU' },
-    { id: 'NRT', lat: 35.76, lng: 140.38,  label: 'CF-NRT', continent: 'AS' },
-    { id: 'SIN', lat: 1.35,  lng: 103.98,  label: 'CF-SIN', continent: 'AS' },
-    { id: 'SYD', lat: -33.94, lng: 151.17, label: 'CF-SYD', continent: 'OC' },
-    { id: 'GRU', lat: -23.43, lng: -46.47, label: 'CF-GRU', continent: 'SA' },
+    // Major Global Nodes
+    { id: 'SFO', lat: 37.77, lng: -122.42, label: 'CF-SFO', continent: 'NA', type: 'major' },
+    { id: 'IAD', lat: 39.04, lng: -77.48,  label: 'CF-IAD', continent: 'NA', type: 'major' },
+    { id: 'LHR', lat: 51.47, lng: -0.45,   label: 'CF-LHR', continent: 'EU', type: 'major' },
+    { id: 'FRA', lat: 50.03, lng: 8.57,    label: 'CF-FRA', continent: 'EU', type: 'major' },
+    { id: 'NRT', lat: 35.76, lng: 140.38,  label: 'CF-NRT', continent: 'AS', type: 'major' },
+    { id: 'SIN', lat: 1.35,  lng: 103.98,  label: 'CF-SIN', continent: 'AS', type: 'major' },
+    { id: 'SYD', lat: -33.94, lng: 151.17, label: 'CF-SYD', continent: 'OC', type: 'major' },
+    { id: 'GRU', lat: -23.43, lng: -46.47, label: 'CF-GRU', continent: 'SA', type: 'major' },
+    
+    // Minor US Nodes (normally hidden)
+    { id: 'LAX', lat: 34.05, lng: -118.24, label: 'CF-LAX', continent: 'NA', type: 'minor' },
+    { id: 'SEA', lat: 47.60, lng: -122.33, label: 'CF-SEA', continent: 'NA', type: 'minor' },
+    { id: 'DFW', lat: 32.77, lng: -96.79,  label: 'CF-DFW', continent: 'NA', type: 'minor' },
+    { id: 'ORD', lat: 41.87, lng: -87.62,  label: 'CF-ORD', continent: 'NA', type: 'minor' },
+    { id: 'MIA', lat: 25.76, lng: -80.19,  label: 'CF-MIA', continent: 'NA', type: 'minor' },
+    { id: 'ATL', lat: 33.74, lng: -84.38,  label: 'CF-ATL', continent: 'NA', type: 'minor' },
+    { id: 'DEN', lat: 39.73, lng: -104.99, label: 'CF-DEN', continent: 'NA', type: 'minor' },
+    { id: 'EWR', lat: 40.71, lng: -74.00,  label: 'CF-EWR', continent: 'NA', type: 'minor' },
   ], []);
 
   const ORIGIN = { lat: 37.55, lng: -121.98, label: 'ORIGIN' }; // Fremont / Bay Area
@@ -66,7 +86,6 @@ export default function Globe() {
     container.appendChild(renderer.domElement);
 
     /* ── Dynamic telemetry meshes ──────────────── */
-    // 1. ISS (Red, larger glow)
     const issGeo = new THREE.SphereGeometry(0.02, 8, 8);
     const issMat = new THREE.MeshBasicMaterial({ color: 0xff3333 });
     const issMesh = new THREE.Mesh(issGeo, issMat);
@@ -79,7 +98,6 @@ export default function Globe() {
     scene.add(issMesh);
     issMeshRef.current = issMesh;
 
-    // 2. User Node (Yellow)
     const nodeGeo = new THREE.SphereGeometry(0.025, 8, 8);
     const nodeMat = new THREE.MeshBasicMaterial({ color: 0xffea00 });
     const nodeMesh = new THREE.Mesh(nodeGeo, nodeMat);
@@ -92,17 +110,14 @@ export default function Globe() {
     scene.add(nodeMesh);
     nodeMeshRef.current = nodeMesh;
 
-    // 3. Earthquakes Group
     const eqGroup = new THREE.Group();
     scene.add(eqGroup);
     eqGroupRef.current = eqGroup;
 
-    // 4. Connection Arcs Group
     const userArcGroup = new THREE.Group();
     scene.add(userArcGroup);
     userArcRef.current = userArcGroup;
 
-    // 5. Origin Server (White)
     const originGeo = new THREE.SphereGeometry(0.02, 8, 8);
     const originMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const originMesh = new THREE.Mesh(originGeo, originMat);
@@ -188,10 +203,25 @@ export default function Globe() {
     scene.add(new THREE.Points(particleGeo, particleMat));
 
     /* ── Animate ───────────────────────────────── */
+    let lastExpandedState = false;
+
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate);
-      scene.rotation.y += 0.002;
-      renderer.render(scene, camera);
+      
+      if (isExpandedRef.current) {
+        scene.rotation.y += 0.002;
+        renderer.render(scene, camera);
+        lastExpandedState = true;
+      } else {
+        if (lastExpandedState) {
+          renderer.render(scene, camera);
+          lastExpandedState = false;
+        }
+        if (needsUpdateRef.current) {
+          renderer.render(scene, camera);
+          needsUpdateRef.current = false;
+        }
+      }
     };
     animate();
 
@@ -202,10 +232,16 @@ export default function Globe() {
       camera.aspect = nw / nh;
       camera.updateProjectionMatrix();
       renderer.setSize(nw, nh);
+      needsUpdateRef.current = true;
     };
-    window.addEventListener('resize', onResize);
+    
+    // We also need a resize observer for the container because
+    // changing isExpanded changes the container size dynamically.
+    const resizeObserver = new ResizeObserver(() => onResize());
+    resizeObserver.observe(container);
 
     return () => {
+      resizeObserver.disconnect();
       window.removeEventListener('resize', onResize);
       cancelAnimationFrame(frameRef.current);
       renderer.dispose();
@@ -221,6 +257,7 @@ export default function Globe() {
       const { x, y, z } = toCoords(telemetry.iss.latitude, telemetry.iss.longitude, 1.06); 
       issMeshRef.current.position.set(x, y, z);
       issMeshRef.current.visible = true;
+      needsUpdateRef.current = true;
     }
 
     if (telemetry.earthquakes && eqGroupRef.current) {
@@ -240,6 +277,7 @@ export default function Globe() {
          mesh.scale.set(scale, scale, scale);
          eqGroupRef.current.add(mesh);
       });
+      needsUpdateRef.current = true;
     }
 
     // Node & Routing Logic
@@ -256,8 +294,8 @@ export default function Globe() {
       // 2. Hide Edge Nodes not in continent (Except SFO which is Host Edge)
       Object.values(edgeNodesRef.current).forEach(({ group, data }) => {
         if (data.id === 'SFO') {
-          group.visible = true; // Always show host edge
-        } else if (data.continent === userContinent) {
+          group.visible = true; 
+        } else if (data.type === 'major' && data.continent === userContinent) {
           group.visible = true;
         } else {
           group.visible = false;
@@ -275,7 +313,31 @@ export default function Globe() {
         }
       });
 
-      // 4. Draw Routing Arcs: Origin -> SFO -> Closest Edge -> User
+      // Find an intermediate hop if distance > 1500km and we are expanded
+      let midNode = null;
+      const sfoNode = EDGE_NODES.find(n => n.id === 'SFO');
+      const distSfoToUserEdge = getDist(sfoNode.lat, sfoNode.lng, closestEdge.lat, closestEdge.lng);
+      
+      if (distSfoToUserEdge > 1500 && closestEdge.id !== 'SFO') {
+         const midLat = (sfoNode.lat + closestEdge.lat) / 2;
+         const midLng = (sfoNode.lng + closestEdge.lng) / 2;
+         let bestMidDist = Infinity;
+         EDGE_NODES.forEach(n => {
+            if (n.type === 'minor' && n.id !== closestEdge.id && n.id !== sfoNode.id) {
+               const d = getDist(midLat, midLng, n.lat, n.lng);
+               if (d < bestMidDist && d < (distSfoToUserEdge / 2)) {
+                  bestMidDist = d;
+                  midNode = n;
+               }
+            }
+         });
+      }
+
+      // Activate nodes used in the path
+      if (closestEdge) edgeNodesRef.current[closestEdge.id].group.visible = true;
+      if (midNode && isExpanded) edgeNodesRef.current[midNode.id].group.visible = true;
+
+      // 4. Draw Routing Arcs
       if (userArcRef.current && closestEdge) {
         while(userArcRef.current.children.length > 0){ 
             userArcRef.current.remove(userArcRef.current.children[0]); 
@@ -289,7 +351,7 @@ export default function Globe() {
           const v2 = new THREE.Vector3(p2.x, p2.y, p2.z);
           
           const dist = v1.distanceTo(v2);
-          if (dist < 0.01) return; // Too close
+          if (dist < 0.01) return;
 
           const curveHeight = 1 + (dist * heightMult);
           const mid = new THREE.Vector3(
@@ -305,51 +367,87 @@ export default function Globe() {
           userArcRef.current.add(new THREE.Line(arcGeo, arcMat));
         };
 
-        // Origin -> SFO
         drawArc(ORIGIN.lat, ORIGIN.lng, 37.77, -122.42, 0xffffff, 0.4, 0.2);
         
-        // SFO -> Closest Edge
-        drawArc(37.77, -122.42, closestEdge.lat, closestEdge.lng, 0x06b6d4, 0.6, 0.4);
-
-        // Closest Edge -> User
+        if (isExpanded && midNode) {
+          drawArc(37.77, -122.42, midNode.lat, midNode.lng, 0x06b6d4, 0.6, 0.4);
+          drawArc(midNode.lat, midNode.lng, closestEdge.lat, closestEdge.lng, 0x06b6d4, 0.6, 0.4);
+        } else {
+          drawArc(37.77, -122.42, closestEdge.lat, closestEdge.lng, 0x06b6d4, 0.6, 0.4);
+        }
+        
         drawArc(closestEdge.lat, closestEdge.lng, userLat, userLng, 0xffea00, 0.8, 0.2);
       }
+      needsUpdateRef.current = true;
     }
 
-  }, [telemetry]);
+  }, [telemetry, isExpanded]);
+
+  // Wrapper classes depend on expanded state
+  const wrapperClass = isExpanded
+    ? "fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md p-4 sm:p-10"
+    : "border-glow bg-black/60 p-3 flex flex-col relative overflow-hidden group cursor-pointer hover:border-green-500/50 transition-colors";
+
+  const containerClass = isExpanded
+    ? "w-full max-w-4xl aspect-square relative"
+    : "w-full aspect-square max-h-[400px] relative";
 
   return (
-    <div className="border-glow bg-black/60 p-3 flex flex-col relative overflow-hidden group">
-      <div
-        className="text-[10px] uppercase tracking-widest text-green-500/60 mb-2 font-bold relative z-10"
-        style={{ fontFamily: 'var(--font-display)' }}
-      >
-        Global Uplink — Network Topology
-      </div>
+    <div className={wrapperClass} onClick={() => !isExpanded && setIsExpanded(true)}>
       
-      <div ref={mountRef} className="w-full aspect-square max-h-[400px] relative">
-        {/* Overlay labels */}
-        <div className="absolute top-2 right-2 text-[9px] text-cyan-400/50 text-glow-cyan space-y-0.5 pointer-events-none">
-          <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 bg-white rounded-full"></div> HOST_ORIGIN</div>
-          <div className="flex items-center gap-1 mt-1"><div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div> EDGE_NODES</div>
-          {telemetry?.iss && (
-            <div className="flex items-center gap-1 mt-1 text-red-400/70 text-glow-none">
-              <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div> ISS_ORBIT
-            </div>
-          )}
-          {telemetry?.node && (
-            <div className="flex items-center gap-1 mt-1 text-yellow-400/70 text-glow-none">
-              <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></div> NODE_DETECTED
-            </div>
-          )}
-          {telemetry?.earthquakes?.length > 0 && (
-            <div className="flex items-center gap-1 mt-1 text-orange-400/70 text-glow-none">
-              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div> SEISMIC_ACTIVITY
-            </div>
-          )}
+      {isExpanded && (
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsExpanded(false);
+          }}
+          className="absolute top-6 right-6 text-green-500/50 hover:text-green-400 text-[10px] uppercase tracking-widest border border-green-500/20 px-4 py-2 bg-black/50 z-50 hover:border-green-500/50"
+        >
+          [CLOSE_UPLINK]
+        </button>
+      )}
+
+      {/* When not expanded, show a hint */}
+      {!isExpanded && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+           <div className="bg-black/80 px-3 py-1 border border-green-500/40 text-[10px] text-green-400 uppercase tracking-widest animate-pulse">
+             CLICK_TO_EXPAND
+           </div>
         </div>
-        <div className="absolute bottom-2 left-2 text-[9px] text-green-500/30 pointer-events-none">
-          ACTIVE REGION: {telemetry?.node?.continent_code || 'SCANNING'} &nbsp;|&nbsp; ROUTE_ESTABLISHED
+      )}
+
+      <div className="w-full flex flex-col">
+        <div
+          className="text-[10px] uppercase tracking-widest text-green-500/60 mb-2 font-bold relative z-10"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          Global Uplink — Network Topology {isExpanded && '(ACTIVE)'}
+        </div>
+        
+        <div ref={mountRef} className={containerClass}>
+          {/* Overlay labels */}
+          <div className="absolute top-2 right-2 text-[9px] text-cyan-400/50 text-glow-cyan space-y-0.5 pointer-events-none">
+            <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 bg-white rounded-full"></div> HOST_ORIGIN</div>
+            <div className="flex items-center gap-1 mt-1"><div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div> EDGE_NODES</div>
+            {telemetry?.iss && (
+              <div className="flex items-center gap-1 mt-1 text-red-400/70 text-glow-none">
+                <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div> ISS_ORBIT
+              </div>
+            )}
+            {telemetry?.node && (
+              <div className="flex items-center gap-1 mt-1 text-yellow-400/70 text-glow-none">
+                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></div> NODE_DETECTED
+              </div>
+            )}
+            {telemetry?.earthquakes?.length > 0 && (
+              <div className="flex items-center gap-1 mt-1 text-orange-400/70 text-glow-none">
+                <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div> SEISMIC_ACTIVITY
+              </div>
+            )}
+          </div>
+          <div className="absolute bottom-2 left-2 text-[9px] text-green-500/30 pointer-events-none">
+            ACTIVE REGION: {telemetry?.node?.continent_code || 'SCANNING'} &nbsp;|&nbsp; ROUTE_ESTABLISHED
+          </div>
         </div>
       </div>
     </div>

@@ -32,7 +32,7 @@ export function TelemetryProvider({ children, enabled = true }) {
         .catch(e => console.error('ISS fetch error:', e));
     };
     fetchIss();
-    const issTimer = setInterval(fetchIss, 3000);
+    const issTimer = setInterval(fetchIss, 120000); // Pull every 2 minutes
 
     // 3. Earthquakes
     const fetchEq = () => {
