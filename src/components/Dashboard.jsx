@@ -67,7 +67,7 @@ function DataTicker() {
 }
 
 /* ── Network activity log panel ─────────────────────── */
-function ActivityLog() {
+function ActivityLog({ onClose }) {
   const [entries, setEntries] = useState([]);
   const logRef = useRef(null);
 
@@ -102,14 +102,29 @@ function ActivityLog() {
   }, [entries]);
 
   return (
-    <div className="border-glow bg-black/60 p-3 h-full flex flex-col">
-      <div className="text-[10px] uppercase tracking-widest text-green-500/60 mb-2 font-bold"
-        style={{ fontFamily: 'var(--font-display)' }}>
-        Network Activity
-      </div>
-      <div ref={logRef} className="flex-1 overflow-y-auto text-[11px] leading-[16px] text-green-500/70 text-glow">
-        {entries.map((e, i) => <div key={i}>{e}</div>)}
-        <span className="cursor-blink text-green-400">▌</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-10 pointer-events-auto" onClick={onClose}>
+      <div className="w-full max-w-2xl border border-green-500/50 bg-black/95 shadow-[0_0_40px_rgba(34,197,94,0.15)] flex flex-col h-[60vh] sm:h-[500px]" onClick={e => e.stopPropagation()}>
+        
+        {/* Retro Title Bar */}
+        <div className="border-b border-green-500/50 bg-green-900/20 px-3 py-2 flex items-center justify-between">
+          <div className="text-[10px] text-green-400 font-bold uppercase tracking-widest flex items-center gap-2" style={{ fontFamily: 'var(--font-display)' }}>
+            <span className="w-2 h-2 bg-green-500 rounded-sm animate-pulse"></span>
+            BCS_SYS:// Network Activity Log
+          </div>
+          <button 
+            onClick={onClose}
+            className="text-[10px] text-green-400 hover:bg-green-500 hover:text-black border border-green-500/50 px-2 py-0.5 transition-colors"
+          >
+            [X]
+          </button>
+        </div>
+
+        <div className="p-4 flex-1 flex flex-col overflow-hidden">
+          <div ref={logRef} className="flex-1 overflow-y-auto text-[11px] leading-[16px] text-green-500/70 text-glow">
+            {entries.map((e, i) => <div key={i}>{e}</div>)}
+            <span className="cursor-blink text-green-400">▌</span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -227,6 +242,7 @@ export default function Dashboard() {
   const [showSettings, setShowSettings] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [showEdgeStats, setShowEdgeStats] = useState(false);
+  const [showActivityLog, setShowActivityLog] = useState(false);
   const [drillDownService, setDrillDownService] = useState(null);
 
   /* ── Feature toggles (persisted in sessionStorage) ── */
@@ -267,11 +283,12 @@ export default function Dashboard() {
         else if (showSettings) setShowSettings(false);
         else if (showGuide) setShowGuide(false);
         else if (showEdgeStats) setShowEdgeStats(false);
+        else if (showActivityLog) setShowActivityLog(false);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [drillDownService, showSettings]);
+  }, [drillDownService, showSettings, showGuide, showEdgeStats, showActivityLog]);
 
   /* ── Matrix rain columns ────────────────────────────  */
   const rainCols = Array.from({ length: 12 }, (_, i) => (
@@ -310,6 +327,11 @@ export default function Dashboard() {
         <NetworkStats onClose={() => setShowEdgeStats(false)} />
       )}
 
+      {/* Activity Log overlay */}
+      {showActivityLog && (
+        <ActivityLog onClose={() => setShowActivityLog(false)} />
+      )}
+
       {/* ── Settings overlay ──────────────────────── */}
       {showSettings && (
         <SettingsPanel
@@ -340,6 +362,12 @@ export default function Dashboard() {
               className="text-[10px] uppercase tracking-widest text-cyan-500/40 hover:text-cyan-400 border border-cyan-500/20 px-2 py-1 hover:border-cyan-500/50 transition-colors hidden sm:block"
             >
               [EDGE_STATS]
+            </button>
+            <button
+              onClick={() => setShowActivityLog(true)}
+              className="text-[10px] uppercase tracking-widest text-green-500/40 hover:text-green-400 border border-green-500/20 px-2 py-1 hover:border-green-500/50 transition-colors hidden sm:block"
+            >
+              [ACTIVITY]
             </button>
             <button
               onClick={() => setShowGuide(true)}
@@ -388,6 +416,12 @@ export default function Dashboard() {
               className="text-[10px] uppercase tracking-widest text-cyan-500/40 hover:text-cyan-400 border border-cyan-500/20 px-3 py-1.5 hover:border-cyan-500/50 transition-colors"
             >
               [EDGE_STATS]
+            </button>
+            <button
+              onClick={() => setShowActivityLog(true)}
+              className="text-[10px] uppercase tracking-widest text-green-500/40 hover:text-green-400 border border-green-500/20 px-3 py-1.5 hover:border-green-500/50 transition-colors"
+            >
+              [ACTIVITY]
             </button>
             <button
               onClick={() => setShowGuide(true)}
@@ -481,11 +515,6 @@ export default function Dashboard() {
                 <Globe />
               </Suspense>
             )}
-
-            {/* Activity log */}
-            <div className="h-[300px]">
-              <ActivityLog />
-            </div>
           </div>
         </div>
 
