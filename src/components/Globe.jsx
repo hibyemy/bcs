@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { useTelemetry } from './TelemetryContext';
 
 // Helper: Lat/Lng to ThreeJS vector (y is up)
@@ -202,14 +203,28 @@ export default function Globe() {
     });
     scene.add(new THREE.Points(particleGeo, particleMat));
 
+    /* ── Controls ──────────────────────────────── */
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enableZoom = true;
+    controls.minDistance = 1.2;
+    controls.maxDistance = 5;
+    
+    // Rotate scene to face North America initially
+    scene.rotation.y = 1.5;
+    scene.rotation.x = 0.2;
+
     /* ── Animate ───────────────────────────────── */
     let lastExpandedState = false;
 
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate);
       
+      controls.enabled = isExpandedRef.current;
+
       if (isExpandedRef.current) {
-        scene.rotation.y += 0.002;
+        controls.update(); // Required for damping
         renderer.render(scene, camera);
         lastExpandedState = true;
       } else {
@@ -385,7 +400,7 @@ export default function Globe() {
 
   // Wrapper classes depend on expanded state
   const wrapperClass = isExpanded
-    ? "fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md p-4 sm:p-10"
+    ? "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-10"
     : "border-glow bg-black/60 p-3 flex flex-col relative overflow-hidden group cursor-pointer hover:border-green-500/50 transition-colors";
 
   const containerClass = isExpanded
