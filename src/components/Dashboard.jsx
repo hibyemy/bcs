@@ -251,7 +251,7 @@ export default function Dashboard() {
       const saved = sessionStorage.getItem('bcs-features');
       if (saved) return JSON.parse(saved);
     } catch {}
-    return { console: true, globe: true, drilldown: false, livefeeds: true };
+    return { console: true, globe: false, drilldown: false, livefeeds: false, sysstats: false };
   });
 
   useEffect(() => {
@@ -470,34 +470,10 @@ export default function Dashboard() {
                 onDrillDown={setDrillDownService}
                 drillDownEnabled={features.drilldown}
               />
-              <ServiceNode
-                name="Factorio"
-                desc="Dedicated game server · Port 34197 · Headless"
-                url="#"
-                status="online"
-                onDrillDown={setDrillDownService}
-                drillDownEnabled={features.drilldown}
-              />
-              <ServiceNode
-                name="SSH"
-                desc="Secure shell access · Ed25519 · Port 22"
-                url="#"
-                status="online"
-                onDrillDown={setDrillDownService}
-                drillDownEnabled={features.drilldown}
-              />
-              <ServiceNode
-                name="Signals Visualizer"
-                desc="Interactive signals & systems learning platform"
-                url="https://signals.bowenchen.xyz"
-                status="online"
-                onDrillDown={setDrillDownService}
-                drillDownEnabled={features.drilldown}
-              />
             </div>
 
             {/* Stats */}
-            <SystemStats />
+            {features.sysstats && <SystemStats />}
 
             {/* Live Feeds */}
             {features.livefeeds && (

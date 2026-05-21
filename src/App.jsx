@@ -7,16 +7,17 @@ export default function App() {
     return !sessionStorage.getItem('hasBooted');
   });
 
-  if (isBooting) {
-    return (
-      <BootSequence
-        onComplete={() => {
-          sessionStorage.setItem('hasBooted', 'true');
-          setIsBooting(false);
-        }}
-      />
-    );
-  }
-
-  return <Dashboard />;
+  return (
+    <>
+      <Dashboard />
+      {isBooting && (
+        <BootSequence
+          onComplete={() => {
+            sessionStorage.setItem('hasBooted', 'true');
+            setIsBooting(false);
+          }}
+        />
+      )}
+    </>
+  );
 }

@@ -20,7 +20,7 @@ const COMMANDS = {
     '  status      System status overview',
     '  clear       Clear the console',
     '  neofetch    System information',
-    '  ping <svc>  Ping a service (nextcloud, jellyfin, signals, factorio, ssh)',
+    '  ping <svc>  Ping a service (nextcloud, jellyfin)',
     '  ssh <svc>   Connect to a service',
     '  whoami      Current user info',
     '  uptime      Show system uptime',
@@ -37,9 +37,6 @@ const COMMANDS = {
   ls: () => [
     'drwxr-xr-x  nextcloud/',
     'drwxr-xr-x  jellyfin/',
-    'drwxr-xr-x  factorio/',
-    'drwxr-xr-x  ssh-gateway/',
-    'drwxr-xr-x  dns/',
     '-rw-r--r--  motd',
     '-rw-r--r--  .env',
   ],
@@ -59,9 +56,6 @@ const COMMANDS = {
 const SERVICES = {
   nextcloud: 'https://cloud.bowenchen.xyz',
   jellyfin: 'https://jellyfin.bowenchen.xyz',
-  signals: 'https://signals.bowenchen.xyz',
-  factorio: null,
-  ssh: null,
 };
 
 export default function CommandConsole({ uptimeSeconds = 0, onDrillDown }) {
@@ -139,7 +133,7 @@ export default function CommandConsole({ uptimeSeconds = 0, onDrillDown }) {
         }, 1200);
         return;
       } else {
-        output = [`ping: unknown host: ${svc}`, 'Known hosts: nextcloud, jellyfin, signals, factorio, ssh'];
+        output = [`ping: unknown host: ${svc}`, 'Known hosts: nextcloud, jellyfin'];
       }
     } else if (cmd.startsWith('ssh ')) {
       const svc = cmd.split(' ')[1];
@@ -159,7 +153,7 @@ export default function CommandConsole({ uptimeSeconds = 0, onDrillDown }) {
         }, 800);
         return;
       } else {
-        output = [`ssh: Could not resolve hostname ${svc}`, 'Known hosts: nextcloud, jellyfin, signals, factorio, ssh'];
+        output = [`ssh: Could not resolve hostname ${svc}`, 'Known hosts: nextcloud, jellyfin'];
       }
     } else {
       output = [`bcs-sh: command not found: ${cmd}`, 'Type "help" for available commands.'];

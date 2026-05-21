@@ -66,7 +66,7 @@ export default function BootSequence({ onComplete }) {
       if (i < BOOT_LOG.length) {
         setLines(prev => [...prev, BOOT_LOG[i].text]);
         indexRef.current = i + 1;
-        timeoutId = setTimeout(addNext, BOOT_LOG[i].delay);
+        timeoutId = setTimeout(addNext, Math.max(10, BOOT_LOG[i].delay / 5));
       } else {
         setDone(true);
         timeoutId = setTimeout(() => { if (onComplete) onComplete(); }, 600);

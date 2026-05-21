@@ -5,6 +5,7 @@ const TOGGLES = [
   { key: 'globe',      label: '3D Globe' },
   { key: 'drilldown',  label: 'Subsystem Drill-Down' },
   { key: 'livefeeds',  label: 'Live Data Feeds' },
+  { key: 'sysstats',   label: 'System Resources' },
   { key: 'edgestats',  label: 'Edge Network Telemetry' },
 ];
 
