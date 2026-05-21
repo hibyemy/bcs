@@ -9,12 +9,21 @@ export default defineConfig({
     sourcemap: 'hidden', // Generates sourcemaps but doesn't link them publicly
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          three: ['three'],
-          lucide: ['lucide-react']
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react/') || id.includes('react-dom/')) {
+              return 'vendor'
+            }
+            if (id.includes('three')) {
+              return 'three'
+            }
+            if (id.includes('lucide')) {
+              return 'lucide'
+            }
+          }
         }
       }
     }
   }
 })
+
