@@ -470,6 +470,30 @@ export default function Dashboard() {
                 onDrillDown={setDrillDownService}
                 drillDownEnabled={features.drilldown}
               />
+              <ServiceNode
+                name="SD Tester"
+                desc="SD card performance & reliability testing utility"
+                url="https://github.com/hibyemy/sd_tester"
+                status="online"
+                onDrillDown={setDrillDownService}
+                drillDownEnabled={features.drilldown}
+              />
+              <ServiceNode
+                name="TDashcamStudio"
+                desc="Tesla dashcam footage viewer & multi-angle player"
+                url="https://github.com/hibyemy/TDashcamStudio"
+                status="online"
+                onDrillDown={setDrillDownService}
+                drillDownEnabled={features.drilldown}
+              />
+              <ServiceNode
+                name="Tesla Scanner"
+                desc="Tesla vehicle diagnostics & CAN bus reader tool"
+                url="https://github.com/hibyemy/tesla_scanner"
+                status="online"
+                onDrillDown={setDrillDownService}
+                drillDownEnabled={features.drilldown}
+              />
             </div>
 
             {/* Stats */}

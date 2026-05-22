@@ -23,6 +23,7 @@ function genSockets() {
 }
 
 function genDockerPs(service) {
+  const key = service.replace(/[\s-]/g, '_').toLowerCase();
   const containers = {
     nextcloud: [
       { id: 'a1b2c3d4', name: 'nextcloud-app',  status: 'Up 14 days', ports: '443->443/tcp' },
@@ -32,6 +33,18 @@ function genDockerPs(service) {
     jellyfin: [
       { id: 'f3a4b5c6', name: 'jellyfin',        status: 'Up 7 days', ports: '8096->8096/tcp' },
       { id: 'd7e8f9a0', name: 'jellyfin-ffmpeg', status: 'Up 7 days', ports: '' },
+    ],
+    sd_tester: [
+      { id: 'b1c2d3e4', name: 'sd-tester-daemon', status: 'Up 5 days', ports: '8080->8080/tcp' },
+      { id: 'e9f0a1b2', name: 'sd-tester-db',     status: 'Up 5 days', ports: '5432/tcp' }
+    ],
+    tdashcamstudio: [
+      { id: 'a4b5c6d7', name: 'tdashcam-studio-web', status: 'Up 2 days', ports: '3000->3000/tcp' },
+      { id: 'f8g9h0i1', name: 'tdashcam-ffmpeg',     status: 'Up 2 days', ports: '' }
+    ],
+    tesla_scanner: [
+      { id: 'c3d4e5f6', name: 'tesla-scanner-listener', status: 'Up 10 days', ports: '8443->8443/tcp' },
+      { id: 'e7f8a9b0', name: 'tesla-scanner-api',      status: 'Up 10 days', ports: '8000/tcp' }
     ],
     factorio: [
       { id: 'b1c2d3e4', name: 'factorio-server', status: 'Up 3 days', ports: '34197->34197/udp' },
@@ -43,10 +56,11 @@ function genDockerPs(service) {
       { id: 'ab12cd34', name: 'signals-visualizer', status: 'Up 2 days', ports: '80->80/tcp' },
     ],
   };
-  return containers[service] || [];
+  return containers[key] || [];
 }
 
 function genLogs(service) {
+  const key = service.replace(/[\s-]/g, '_').toLowerCase();
   const msgs = {
     nextcloud: [
       '[INFO] WebDAV sync completed for user: admin',
@@ -62,6 +76,29 @@ function genLogs(service) {
       '[INFO] Library scan completed: 1,247 items indexed',
       '[INFO] Hardware acceleration: VAAPI active',
       '[WARN] Subtitle extraction failed for 1 file',
+    ],
+    sd_tester: [
+      '[INFO] SD Tester daemon started.',
+      '[INFO] Benchmarking partition /dev/sdb1...',
+      '[INFO] Test sequential write: 45.2 MB/s',
+      '[INFO] Test sequential read: 92.1 MB/s',
+      '[INFO] Sector integrity check completed: 0 bad sectors',
+      '[INFO] Disk test cycle 4 completed successfully.'
+    ],
+    tdashcamstudio: [
+      '[INFO] TDashcamStudio stream decoders active.',
+      '[INFO] Loading clip folder: /mnt/tesla_cam/SavedClips/2026-05-21/',
+      '[INFO] Multi-cam synchronization: sync lock achieved (6 channels)',
+      '[INFO] Transcoding export job started: clip_front.mp4 (H.264)',
+      '[INFO] GUI Web client connected: session_3a1b',
+    ],
+    tesla_scanner: [
+      '[INFO] Tesla Scanner socket interface active.',
+      '[INFO] Handshake verified with OBD-II/CAN-bus gateway.',
+      '[INFO] Query battery telemetry: SoC=82%, Temp=28.5C, Voltage=385V',
+      '[INFO] Logged CAN frame ID 0x102 (Speed/RPM data)',
+      '[WARN] Latency spike detected on CAN controller interface',
+      '[INFO] Uploading diagnostics telemetry stream to cloud...',
     ],
     factorio: [
       '[INFO] Map saved: _autosave3.zip (24.8 MB)',
@@ -83,7 +120,7 @@ function genLogs(service) {
       '[INFO] GET /api/healthcheck 200 OK',
     ],
   };
-  return msgs[service] || ['[INFO] No logs available.'];
+  return msgs[key] || ['[INFO] No logs available.'];
 }
 
 /* ═══════════════════════════════════════════════════════
