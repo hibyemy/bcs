@@ -494,6 +494,14 @@ export default function Dashboard() {
                 onDrillDown={setDrillDownService}
                 drillDownEnabled={features.drilldown}
               />
+              <ServiceNode
+                name="M5Core2 Controller"
+                desc="M5Core2 IoT controller firmware & home automation system"
+                url="https://github.com/hibyemy/m5core2systemcontroller-projects"
+                status="online"
+                onDrillDown={setDrillDownService}
+                drillDownEnabled={features.drilldown}
+              />
             </div>
 
             {/* Stats */}

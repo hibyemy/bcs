@@ -23,7 +23,8 @@ function genSockets() {
 }
 
 function genDockerPs(service) {
-  const key = service.replace(/[\s-]/g, '_').toLowerCase();
+  let key = service.replace(/[\s-]/g, '_').toLowerCase();
+  if (key === 'm5core2_controller') key = 'm5_controller';
   const containers = {
     nextcloud: [
       { id: 'a1b2c3d4', name: 'nextcloud-app',  status: 'Up 14 days', ports: '443->443/tcp' },
@@ -46,6 +47,10 @@ function genDockerPs(service) {
       { id: 'c3d4e5f6', name: 'tesla-scanner-listener', status: 'Up 10 days', ports: '8443->8443/tcp' },
       { id: 'e7f8a9b0', name: 'tesla-scanner-api',      status: 'Up 10 days', ports: '8000/tcp' }
     ],
+    m5_controller: [
+      { id: 'm5c2sys1', name: 'm5core2-system-controller', status: 'Up 1 day', ports: '80->80/tcp, 1883->1883/tcp' },
+      { id: 'm5c2db02', name: 'm5core2-influxdb',          status: 'Up 1 day', ports: '8086/tcp' }
+    ],
     factorio: [
       { id: 'b1c2d3e4', name: 'factorio-server', status: 'Up 3 days', ports: '34197->34197/udp' },
     ],
@@ -60,7 +65,8 @@ function genDockerPs(service) {
 }
 
 function genLogs(service) {
-  const key = service.replace(/[\s-]/g, '_').toLowerCase();
+  let key = service.replace(/[\s-]/g, '_').toLowerCase();
+  if (key === 'm5core2_controller') key = 'm5_controller';
   const msgs = {
     nextcloud: [
       '[INFO] WebDAV sync completed for user: admin',
@@ -99,6 +105,17 @@ function genLogs(service) {
       '[INFO] Logged CAN frame ID 0x102 (Speed/RPM data)',
       '[WARN] Latency spike detected on CAN controller interface',
       '[INFO] Uploading diagnostics telemetry stream to cloud...',
+    ],
+    m5_controller: [
+      '[INFO] M5Core2 Controller initialization sequence started.',
+      '[INFO] Wi-Fi connection established. IP: 10.0.1.155',
+      '[INFO] Connecting to MQTT broker at mqtt.bcs.local...',
+      '[INFO] MQTT client connected. Subscribing to telemetry topics.',
+      '[INFO] ESP32 core temp: 48C | Battery: 98% (charging)',
+      '[INFO] Local HTTP API server listening on port 80',
+      '[INFO] Sensors read: temp=21.4C, humidity=42.1%, pressure=1013hPa',
+      '[WARN] Disconnecting / Reconnecting MQTT (KeepAlive timeout)',
+      '[INFO] System logs flushed to database.'
     ],
     factorio: [
       '[INFO] Map saved: _autosave3.zip (24.8 MB)',
