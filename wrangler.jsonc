@@ -1,0 +1,15 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "bcs-pages",
+	"pages_build_output_dir": "dist",
+	"compatibility_date": "2026-05-28",
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "HUB",
+				"class_name": "MultiplayerHub",
+				"script_name": "bcs-do-worker"
+			}
+		]
+	}
+}

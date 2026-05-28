@@ -2,7 +2,6 @@ import React from 'react';
 
 const TOGGLES = [
   { key: 'console',    label: 'Interactive Console' },
-  { key: 'globe',      label: '3D Globe' },
   { key: 'drilldown',  label: 'Subsystem Drill-Down' },
   { key: 'livefeeds',  label: 'Live Data Feeds' },
   { key: 'sysstats',   label: 'System Resources' },

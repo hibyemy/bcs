@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 
 import CommandConsole from './CommandConsole';
 import SubSystemView from './SubSystemView';
 
-const Globe = lazy(() => import('./Globe'));
 const LiveFeeds = lazy(() => import('./LiveFeeds'));
+const ChatConsole = lazy(() => import('./ChatConsole'));
 import SettingsPanel from './SettingsPanel';
 import GuidePanel from './GuidePanel';
 import NetworkStats from './NetworkStats';
@@ -244,14 +244,26 @@ export default function Dashboard() {
   const [showEdgeStats, setShowEdgeStats] = useState(false);
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [drillDownService, setDrillDownService] = useState(null);
+  
+  const [hasAccess, setHasAccess] = useState(() => !!localStorage.getItem('bcs_access_token'));
 
-  /* ── Feature toggles (persisted in sessionStorage) ── */
+  const handleLogin = () => {
+    const authUrl = new URL("http://localhost:8789/authorize");
+    authUrl.searchParams.set("client_id", "bcs-frontend");
+    authUrl.searchParams.set("redirect_uri", window.location.origin + "/api/callback");
+    authUrl.searchParams.set("response_type", "code");
+    window.location.href = authUrl.toString();
+  };
+
   const [features, setFeatures] = useState(() => {
+    const defaultFeatures = { console: true, drilldown: false, livefeeds: false, sysstats: false, chat: true };
     try {
       const saved = sessionStorage.getItem('bcs-features');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        return { ...defaultFeatures, ...JSON.parse(saved) };
+      }
     } catch {}
-    return { console: true, globe: false, drilldown: false, livefeeds: false, sysstats: false };
+    return defaultFeatures;
   });
 
   useEffect(() => {
@@ -301,7 +313,7 @@ export default function Dashboard() {
   ));
 
   return (
-    <TelemetryProvider enabled={features.livefeeds || features.globe}>
+    <TelemetryProvider enabled={features.livefeeds || features.globe || features.chat}>
       <div className="min-h-screen w-full bg-black grid-bg scanlines relative overflow-hidden">
 
       {/* ── Matrix rain background ────────────────── */}
@@ -517,10 +529,18 @@ export default function Dashboard() {
 
           {/* ── Right column ──────────────────────── */}
           <div className="lg:col-span-1 space-y-4">
-            {/* Globe */}
-            {features.globe && (
-              <Suspense fallback={<div className="border-glow bg-black/60 p-3 aspect-square max-h-[400px] flex items-center justify-center text-green-500 animate-pulse text-[10px] tracking-widest">[INITIALIZING_3D_ENGINE]</div>}>
-                <Globe />
+            {!hasAccess && features.chat && (
+                <div className="border-glow bg-black/60 p-3 flex items-center justify-between text-[10px] tracking-widest">
+                  <span className="text-yellow-400/70">⚠ UNAUTHENTICATED SESSION</span>
+                  <button onClick={handleLogin} className="border border-green-500/40 hover:bg-green-500/20 px-3 py-1 text-green-400 transition-colors uppercase">
+                    [LOGIN]
+                  </button>
+                </div>
+            )}
+
+            {features.chat && (
+              <Suspense fallback={<div className="border-glow bg-black/60 p-3 h-[400px] flex items-center justify-center text-green-500 animate-pulse text-[10px] tracking-widest">[ESTABLISHING_COMM_LINK]</div>}>
+                <ChatConsole />
               </Suspense>
             )}
           </div>
