@@ -30,7 +30,7 @@ export async function onRequest(context) {
 
 	const client = createClient({
 		clientID: "bcs-frontend",
-		issuer: context.env.AUTH_ISSUER_URL || "http://localhost:8789",
+		issuer: context.env.AUTH_ISSUER_URL || (url.hostname === "localhost" || url.hostname === "127.0.0.1" ? "http://localhost:8789" : "https://openauth-template.bc2005530.workers.dev"),
 	});
 
 	let userId = "";

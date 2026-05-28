@@ -19,8 +19,8 @@ export async function onRequestGet(context) {
 
   const client = createClient({
     clientID: "bcs-frontend",
-    // We will use an environment variable for issuer, or fallback for dev
-    issuer: context.env.AUTH_ISSUER_URL || "http://localhost:8789",
+    // We will use an environment variable for issuer, or fallback to prod
+    issuer: context.env.AUTH_ISSUER_URL || (url.hostname === "localhost" || url.hostname === "127.0.0.1" ? "http://localhost:8789" : "https://openauth-template.bc2005530.workers.dev"),
   });
 
   try {

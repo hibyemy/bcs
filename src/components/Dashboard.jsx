@@ -248,7 +248,8 @@ export default function Dashboard() {
   const [hasAccess, setHasAccess] = useState(() => document.cookie.includes('bcs_is_auth=true'));
 
   const handleLogin = () => {
-    const authUrl = new URL("http://localhost:8789/authorize");
+    const baseUrl = import.meta.env.VITE_AUTH_ISSUER_URL || (import.meta.env.DEV ? "http://localhost:8789" : "https://openauth-template.bc2005530.workers.dev");
+    const authUrl = new URL(baseUrl + "/authorize");
     authUrl.searchParams.set("client_id", "bcs-frontend");
     authUrl.searchParams.set("redirect_uri", window.location.origin + "/api/callback");
     authUrl.searchParams.set("response_type", "code");
