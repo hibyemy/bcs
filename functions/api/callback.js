@@ -24,13 +24,18 @@ export async function onRequestGet(context) {
   });
 
   try {
-    const tokens = await client.exchange(code, url.origin + "/api/callback");
+    const exchanged = await client.exchange(code, url.origin + "/api/callback");
+    if (exchanged.err) {
+      return new Response("Authentication failed: " + exchanged.err.message, { status: 401 });
+    }
+    
+    const { access } = exchanged.tokens;
     
     // Create headers for multiple cookies
     const headers = new Headers();
     headers.append("Location", "/");
     // Secure HttpOnly cookie for the actual token
-    headers.append("Set-Cookie", `bcs_access_token=${tokens.access}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`);
+    headers.append("Set-Cookie", `bcs_access_token=${access}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`);
     // Non-HttpOnly cookie just so frontend knows auth state
     headers.append("Set-Cookie", `bcs_is_auth=true; Path=/; Secure; SameSite=Lax; Max-Age=3600`);
 
