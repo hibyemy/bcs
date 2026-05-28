@@ -4,6 +4,9 @@ import { PasswordProvider } from "@openauthjs/openauth/provider/password";
 import { PasswordUI } from "@openauthjs/openauth/ui/password";
 import { createSubjects } from "@openauthjs/openauth/subject";
 import { object, string } from "valibot";
+import * as React from 'react';
+import { render } from '@react-email/render';
+import { VerificationEmail } from './VerificationEmail';
 
 // This value should be shared between the OpenAuth server Worker and other
 // client Workers that you connect to it, so the types and schema validation are
@@ -42,18 +45,47 @@ export default {
 				namespace: env.AUTH_STORAGE,
 			}),
 			subjects,
+			allow: async (input) => {
+				try {
+					if (!input || !input.redirectURI) return true;
+					if (input.clientID === "bcs-frontend") {
+						const allowedOrigins = ["http://localhost", "http://127.0.0.1", "https://bowenchen.xyz"];
+						return allowedOrigins.some(origin => input.redirectURI.startsWith(origin));
+					}
+					return false;
+				} catch (e) {
+					console.error("Allow hook error", e);
+					return false;
+				}
+			},
 			providers: {
 				password: PasswordProvider(
 					PasswordUI({
-						// eslint-disable-next-line @typescript-eslint/require-await
 						sendCode: async (email, code) => {
-							// This is where you would email the verification code to the
-							// user, e.g. using Resend:
-							// https://resend.com/docs/send-with-cloudflare-workers
-							console.log(`Sending code ${code} to ${email}`);
+							console.log(`Sending code to ${email}`);
+							
+							const htmlTemplate = await render(<VerificationEmail code={code} />);
+
+							const res = await fetch("https://api.resend.com/emails", {
+								method: "POST",
+								headers: {
+									Authorization: `Bearer ${(env as any).RESEND_API_KEY}`,
+									"Content-Type": "application/json",
+								},
+								body: JSON.stringify({
+									from: "Auth <auth@bowenchen.xyz>",
+									to: email,
+									subject: "BCS:// Verification Code",
+									html: htmlTemplate,
+								}),
+							});
+
+							if (!res.ok) {
+								console.error("Failed to send email via Resend:", await res.text());
+							}
 						},
 						copy: {
-							input_code: "Code (check Worker logs)",
+							input_code: "Code (sent to your email)",
 						},
 					}),
 				),

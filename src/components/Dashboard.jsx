@@ -256,6 +256,13 @@ export default function Dashboard() {
     window.location.href = authUrl.toString();
   };
 
+  const handleLogout = () => {
+    document.cookie = 'bcs_is_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    setHasAccess(false);
+  };
+
   const [features, setFeatures] = useState(() => {
     const defaultFeatures = { console: true, drilldown: false, livefeeds: false, sysstats: false, chat: true };
     try {
@@ -395,6 +402,11 @@ export default function Dashboard() {
               [CONFIG]
             </button>
             <span className="hidden md:inline">CONNECTION UPTIME {fmtUptime(uptime)}</span>
+            {hasAccess ? (
+              <button onClick={handleLogout} className="text-[10px] text-green-400 border border-green-500/50 px-2 py-0.5 hover:bg-green-500/20 hover:border-green-400 transition-colors bg-green-500/10">[LOG OUT]</button>
+            ) : (
+              <button onClick={handleLogin} className="text-[10px] text-yellow-400 border border-yellow-500/50 px-2 py-0.5 hover:bg-yellow-500/20 transition-colors">[LOGIN]</button>
+            )}
             <span className="tabular-nums">
               {new Date().toLocaleTimeString('en-US', { hour12: false })}
             </span>
@@ -530,19 +542,24 @@ export default function Dashboard() {
 
           {/* ── Right column ──────────────────────── */}
           <div className="lg:col-span-1 space-y-4">
-            {!hasAccess && features.chat && (
-                <div className="border-glow bg-black/60 p-3 flex items-center justify-between text-[10px] tracking-widest">
-                  <span className="text-yellow-400/70">⚠ UNAUTHENTICATED SESSION</span>
-                  <button onClick={handleLogin} className="border border-green-500/40 hover:bg-green-500/20 px-3 py-1 text-green-400 transition-colors uppercase">
-                    [LOGIN]
-                  </button>
-                </div>
-            )}
-
-            {features.chat && (
+            {features.chat && hasAccess && (
               <Suspense fallback={<div className="border-glow bg-black/60 p-3 h-[400px] flex items-center justify-center text-green-500 animate-pulse text-[10px] tracking-widest">[ESTABLISHING_COMM_LINK]</div>}>
                 <ChatConsole />
               </Suspense>
+            )}
+            {features.chat && !hasAccess && (
+              <div className="border-glow bg-black/60 p-6 h-[500px] flex flex-col items-center justify-center text-center">
+                <svg className="w-12 h-12 text-yellow-500 mb-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span className="text-yellow-400 mb-2 text-sm tracking-[0.2em] uppercase font-bold text-glow">⚠ ACCESS DENIED</span>
+                <span className="text-green-500/50 text-[10px] uppercase mb-8 max-w-[200px]">
+                  Communication link with the global live chat network requires a verified session token.
+                </span>
+                <button onClick={handleLogin} className="border border-green-500 hover:bg-green-500/20 px-6 py-2 text-green-400 transition-all uppercase tracking-[0.2em] font-bold shadow-[0_0_10px_rgba(34,197,94,0.2)] hover:shadow-[0_0_15px_rgba(34,197,94,0.5)]">
+                  [ INITIATE LOGIN ]
+                </button>
+              </div>
             )}
           </div>
         </div>
