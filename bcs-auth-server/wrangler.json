@@ -6,14 +6,14 @@
 	"kv_namespaces": [
 		{
 			"binding": "AUTH_STORAGE",
-			"id": "afec91ff3f7e4b0b9b9323fc6cf5ff85"
+			"id": "766740073e5c4991b14c3adc0f1fa14d"
 		}
 	],
 	"d1_databases": [
 		{
 			"binding": "AUTH_DB",
 			"database_name": "openauth-template-auth-db",
-			"database_id": "d4dfb2e9-2fd3-4d04-9c83-57b4336a5958"
+			"database_id": "4560463c-3b66-4e95-9f61-a3eaa02f55c7"
 		}
 	],
 	"observability": {
