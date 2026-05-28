@@ -245,7 +245,7 @@ export default function Dashboard() {
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [drillDownService, setDrillDownService] = useState(null);
   
-  const [hasAccess, setHasAccess] = useState(() => !!localStorage.getItem('bcs_access_token'));
+  const [hasAccess, setHasAccess] = useState(() => document.cookie.includes('bcs_is_auth=true'));
 
   const handleLogin = () => {
     const authUrl = new URL("http://localhost:8789/authorize");

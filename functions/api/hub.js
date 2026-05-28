@@ -8,6 +8,11 @@ const subjects = createSubjects({
 	}),
 });
 
+function getCookie(request, name) {
+  const result = request.headers.get("Cookie")?.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return result ? result[2] : null;
+}
+
 export async function onRequest(context) {
 	const request = context.request;
 
@@ -15,11 +20,9 @@ export async function onRequest(context) {
 		return new Response("Expected Upgrade: websocket", { status: 426 });
 	}
 
-	// Token validation: if a token is provided, verify it.
-	// If no token is provided, allow the connection (for development / unauthenticated access).
-	// To enforce auth in production, change the `if (token)` check to require it.
+	// Token validation: read from cookie or Authorization header (fallback)
 	const url = new URL(request.url);
-	const token = url.searchParams.get("token");
+	const token = getCookie(request, "bcs_access_token") || url.searchParams.get("token");
 
 	if (!token) {
 		return new Response("Missing authorization token", { status: 401 });
@@ -27,7 +30,7 @@ export async function onRequest(context) {
 
 	const client = createClient({
 		clientID: "bcs-frontend",
-		issuer: "http://localhost:8789",
+		issuer: context.env.AUTH_ISSUER_URL || "http://localhost:8789",
 	});
 
 	let userId = "";

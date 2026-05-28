@@ -29,7 +29,10 @@ export async function onRequest(context) {
     };
 
     return new Response(JSON.stringify(stats), {
-      headers: { "Content-Type": "application/json" }
+      headers: { 
+        "Content-Type": "application/json",
+        "Cache-Control": "public, s-maxage=60, max-age=60"
+      }
     });
   } catch (error) {
     return new Response(JSON.stringify({ error: "Telemetry link failed" }), { status: 500 });

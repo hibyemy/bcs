@@ -85,10 +85,8 @@ export function TelemetryProvider({ children, enabled = true }) {
 
     // 4. WebSocket setup
     const connectWs = () => {
-      const token = localStorage.getItem("bcs_access_token");
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       let wsUrl = `${protocol}//${window.location.host}/api/hub`;
-      if (token) wsUrl += `?token=${token}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 

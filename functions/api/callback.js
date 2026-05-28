@@ -19,25 +19,25 @@ export async function onRequestGet(context) {
 
   const client = createClient({
     clientID: "bcs-frontend",
-    issuer: "http://localhost:8789",
+    // We will use an environment variable for issuer, or fallback for dev
+    issuer: context.env.AUTH_ISSUER_URL || "http://localhost:8789",
   });
 
   try {
     const tokens = await client.exchange(code, url.origin + "/api/callback");
     
-    // Store token in localStorage and redirect back to dashboard
-    return new Response(
-      `<html>
-        <body style="background: black; color: #22c55e; font-family: monospace;">
-          <script>
-            localStorage.setItem("bcs_access_token", "${tokens.access}");
-            window.location.href = "/";
-          </script>
-          [AUTHENTICATED] Redirecting...
-        </body>
-      </html>`,
-      { headers: { "Content-Type": "text/html" } }
-    );
+    // Create headers for multiple cookies
+    const headers = new Headers();
+    headers.append("Location", "/");
+    // Secure HttpOnly cookie for the actual token
+    headers.append("Set-Cookie", `bcs_access_token=${tokens.access}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`);
+    // Non-HttpOnly cookie just so frontend knows auth state
+    headers.append("Set-Cookie", `bcs_is_auth=true; Path=/; Secure; SameSite=Lax; Max-Age=3600`);
+
+    return new Response(null, {
+      status: 302,
+      headers: headers
+    });
   } catch (e) {
     return new Response("Authentication failed: " + e.message, { status: 401 });
   }
