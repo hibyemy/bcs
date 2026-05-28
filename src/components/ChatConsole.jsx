@@ -100,7 +100,7 @@ export default function ChatConsole() {
       ) : (
         <>
           <div className="flex-1 overflow-y-auto font-mono text-[11px] leading-relaxed space-y-1 pr-2 scrollbar-thin scrollbar-thumb-green-900 scrollbar-track-transparent">
-            {chatMessages.length === 0 && (
+            {chatMessages.length === 0 && isConnected && (
               <div className="text-green-500/40 italic">No communications received...</div>
             )}
             {chatMessages.map((msg, idx) => {
@@ -117,20 +117,36 @@ export default function ChatConsole() {
                 </div>
               );
             })}
+            {!isConnected && (
+              <div className="text-red-500/80 animate-pulse text-glow font-bold uppercase tracking-wider text-[9px] py-1.5 border-t border-b border-red-500/20 my-2 text-center bg-red-950/10">
+                ⚠ COMMUNICATIONS LINK FAILURE — RECONNECTING...
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
           <form onSubmit={handleSend} className="mt-3 flex gap-2 border-t border-green-500/30 pt-3">
-            <span className="text-cyan-400/50 text-[11px] mt-1 shrink-0">{username}&gt;</span>
+            <span className={`text-[11px] mt-1 shrink-0 ${isConnected ? 'text-cyan-400/50' : 'text-red-500/50'}`}>
+              {username}&gt;
+            </span>
             <input 
               type="text" 
               value={input}
               onChange={e => setInput(e.target.value)}
-              className="bg-transparent border-none text-green-400 p-0 text-[11px] flex-1 outline-none placeholder-green-500/30 font-mono min-w-0"
-              placeholder="Transmit message..."
+              disabled={!isConnected}
+              className="bg-transparent border-none text-green-400 p-0 text-[11px] flex-1 outline-none placeholder-green-500/30 font-mono min-w-0 disabled:text-red-500/40 disabled:placeholder-red-950/60"
+              placeholder={isConnected ? "Transmit message..." : "Link offline. Reconnecting..."}
             />
-            <button type="submit" disabled={!input.trim()} className="text-[9px] uppercase tracking-widest text-green-500/60 hover:text-green-400 disabled:opacity-30 disabled:hover:text-green-500/60 shrink-0">
-              [TX]
+            <button 
+              type="submit" 
+              disabled={!input.trim() || !isConnected} 
+              className={`text-[9px] uppercase tracking-widest shrink-0 transition-colors ${
+                isConnected 
+                  ? 'text-green-500/60 hover:text-green-400 disabled:opacity-30' 
+                  : 'text-red-500/40 cursor-not-allowed'
+              }`}
+            >
+              {isConnected ? "[TX]" : "[OFFLINE]"}
             </button>
           </form>
         </>

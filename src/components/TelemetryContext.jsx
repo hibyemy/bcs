@@ -85,61 +85,80 @@ export function TelemetryProvider({ children, enabled = true }) {
 
     // 4. WebSocket setup
     const connectWs = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      let wsUrl = `${protocol}//${window.location.host}/api/hub`;
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        setIsConnected(true);
-        // When connected, if we already have our node data, send presence
-        setTelemetry(t => {
-          if (t.node) {
-            sendPresence(t.node.latitude, t.node.longitude, t.node.continent_code);
+      fetch('/api/me')
+        .then(res => res.json())
+        .then(data => {
+          if (!data.authenticated) {
+            console.warn("[ws] Connection aborted: user not authenticated");
+            setIsConnected(false);
+            if (document.cookie.includes('bcs_is_auth=true')) {
+              window.location.reload();
+            }
+            return;
           }
-          return t;
-        });
-        
-        // Also send heartbeat presence every 10 seconds
-        const presenceTimer = setInterval(() => {
-           setTelemetry(t => {
-             if (t.node) sendPresence(t.node.latitude, t.node.longitude, t.node.continent_code);
-             return t;
-           });
-        }, 10000);
-        ws.presenceTimer = presenceTimer;
-      };
 
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          
-          if (msg.type === 'history') {
-            setChatMessages(Array.isArray(msg.data) ? msg.data : []);
-          } else if (msg.type === 'chat') {
-            setChatMessages(prev => {
-              const next = [...prev, msg];
-              if (next.length > 100) return next.slice(-100); // Prevent memory leak
-              return next;
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          let wsUrl = `${protocol}//${window.location.host}/api/hub`;
+          const ws = new WebSocket(wsUrl);
+          wsRef.current = ws;
+
+          ws.onopen = () => {
+            setIsConnected(true);
+            // When connected, if we already have our node data, send presence
+            setTelemetry(t => {
+              if (t.node) {
+                sendPresence(t.node.latitude, t.node.longitude, t.node.continent_code);
+              }
+              return t;
             });
-          } else if (msg.type === 'presence') {
-            // Update presence map with timestamp
-            setPresences(prev => ({
-              ...prev,
-              [msg.sessionId]: { ...msg, lastSeen: Date.now() }
-            }));
-          }
-        } catch (e) {
-          console.error("Failed to parse websocket message", e);
-        }
-      };
+            
+            // Also send heartbeat presence every 10 seconds
+            const presenceTimer = setInterval(() => {
+               setTelemetry(t => {
+                 if (t.node) sendPresence(t.node.latitude, t.node.longitude, t.node.continent_code);
+                 return t;
+               });
+            }, 10000);
+            ws.presenceTimer = presenceTimer;
+          };
 
-      ws.onclose = () => {
-        setIsConnected(false);
-        if (ws.presenceTimer) clearInterval(ws.presenceTimer);
-        // Try to reconnect in 5 seconds
-        if (active) setTimeout(connectWs, 5000);
-      };
+          ws.onmessage = (event) => {
+            try {
+              const msg = JSON.parse(event.data);
+              
+              if (msg.type === 'history') {
+                setChatMessages(Array.isArray(msg.data) ? msg.data : []);
+              } else if (msg.type === 'chat') {
+                setChatMessages(prev => {
+                  const next = [...prev, msg];
+                  if (next.length > 100) return next.slice(-100); // Prevent memory leak
+                  return next;
+                });
+              } else if (msg.type === 'presence') {
+                // Update presence map with timestamp
+                setPresences(prev => ({
+                  ...prev,
+                  [msg.sessionId]: { ...msg, lastSeen: Date.now() }
+                }));
+              }
+            } catch (e) {
+              console.error("Failed to parse websocket message", e);
+            }
+          };
+
+          ws.onclose = () => {
+            setIsConnected(false);
+            if (ws.presenceTimer) clearInterval(ws.presenceTimer);
+            // Try to reconnect in 5 seconds
+            if (active) setTimeout(connectWs, 5000);
+          };
+        })
+        .catch(err => {
+          console.error("[ws] Pre-connect authentication check failed:", err);
+          setIsConnected(false);
+          // Try to reconnect/retry in 5 seconds
+          if (active) setTimeout(connectWs, 5000);
+        });
     };
 
     connectWs();

@@ -23,8 +23,9 @@ export async function onRequest(context) {
 	// Token validation: read from cookie or Authorization header (fallback)
 	const url = new URL(request.url);
 	const token = getCookie(request, "bcs_access_token") || url.searchParams.get("token");
+	const refreshToken = getCookie(request, "bcs_refresh_token");
 
-	if (!token) {
+	if (!token || token === "undefined") {
 		return new Response("Missing authorization token", { status: 401 });
 	}
 
@@ -33,11 +34,14 @@ export async function onRequest(context) {
 		issuer: context.env.AUTH_ISSUER_URL || (url.hostname === "localhost" || url.hostname === "127.0.0.1" ? "http://localhost:8789" : "https://openauth-template.bc2005530.workers.dev"),
 	});
 
-	console.log("[hub] Token lookup: cookie=" + (getCookie(request, "bcs_access_token") ? "present" : "missing") + ", query=" + (url.searchParams.get("token") ? "present" : "missing"));
+	console.log("[hub] Token lookup: cookie=" + (getCookie(request, "bcs_access_token") ? "present" : "missing") + ", query=" + (url.searchParams.get("token") ? "present" : "missing") + ", refresh=" + (refreshToken ? "present" : "missing"));
 
 	let userId = "";
+	let verified = null;
 	try {
-		const verified = await client.verify(subjects, token);
+		verified = await client.verify(subjects, token, {
+			refresh: refreshToken || undefined
+		});
 		if (verified.err) {
 			console.error("[hub] Token verification failed:", verified.err, "Token snippet:", token ? token.substring(0, 15) + "..." : "null");
 			return new Response("Invalid or expired token", { status: 401 });
@@ -62,5 +66,18 @@ export async function onRequest(context) {
 	});
 	proxyRequest.headers.set("X-User-Id", userId);
 
-	return stub.fetch(proxyRequest);
+	const response = await stub.fetch(proxyRequest);
+
+	if (verified && verified.tokens) {
+		console.log("[hub] Connection upgraded and tokens auto-refreshed, setting new cookies.");
+		const newResponse = new Response(response.body, response);
+		newResponse.headers.append("Set-Cookie", `bcs_access_token=${verified.tokens.access}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`);
+		if (verified.tokens.refresh) {
+			newResponse.headers.append("Set-Cookie", `bcs_refresh_token=${verified.tokens.refresh}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
+		}
+		newResponse.headers.append("Set-Cookie", `bcs_is_auth=true; Path=/; Secure; SameSite=Lax; Max-Age=3600`);
+		return newResponse;
+	}
+
+	return response;
 }

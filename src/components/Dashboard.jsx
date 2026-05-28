@@ -247,6 +247,18 @@ export default function Dashboard() {
   
   const [hasAccess, setHasAccess] = useState(() => document.cookie.includes('bcs_is_auth=true'));
 
+  useEffect(() => {
+    // Session state verification on mount
+    fetch('/api/me')
+      .then(r => r.json())
+      .then(data => {
+        setHasAccess(data.authenticated);
+      })
+      .catch(e => {
+        console.error("[dashboard] Session verification failed on mount:", e);
+      });
+  }, []);
+
   const handleLogin = () => {
     const baseUrl = import.meta.env.VITE_AUTH_ISSUER_URL || (import.meta.env.DEV ? "http://localhost:8789" : "https://openauth-template.bc2005530.workers.dev");
     const authUrl = new URL(baseUrl + "/authorize");

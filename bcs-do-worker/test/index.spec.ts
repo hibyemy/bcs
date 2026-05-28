@@ -75,5 +75,38 @@ describe("MultiplayerHub worker", () => {
 		expect(chat.type).toBe("chat");
 		expect(chat.content).toBe("Hello from test!");
 		expect(chat.username).toBe("Guest_test-u"); // Since username hasn't been set in DB yet, defaults to Guest_ + prefix of userId
+
+		// Connect a second client to check if history contains the message
+		const request2 = new Request("http://example.com/", {
+			headers: {
+				Upgrade: "websocket",
+				Connection: "Upgrade",
+				"X-User-Id": "test-user-456"
+			}
+		});
+		const response2 = await SELF.fetch(request2);
+		expect(response2.status).toBe(101);
+		const ws2 = response2.webSocket;
+		expect(ws2).toBeDefined();
+		ws2!.accept();
+
+		const historyPromise2 = new Promise<any>((resolve) => {
+			ws2!.addEventListener("message", (event) => {
+				const data = JSON.parse(event.data as string);
+				if (data.type === "history") {
+					resolve(data);
+				}
+			});
+		});
+
+		const history2 = await historyPromise2;
+		expect(history2.type).toBe("history");
+		expect(history2.data.length).toBeGreaterThanOrEqual(1);
+		
+		// Find the message we sent
+		const savedMsg = history2.data.find((m: any) => m.content === "Hello from test!");
+		expect(savedMsg).toBeDefined();
+		expect(savedMsg.username).toBe("Guest_test-u");
+		expect(savedMsg.type).toBe("chat");
 	});
 });
