@@ -257,10 +257,9 @@ export default function Dashboard() {
   };
 
   const handleLogout = () => {
-    document.cookie = 'bcs_is_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
-    setHasAccess(false);
+    window.location.href = "/api/logout";
   };
 
   const [features, setFeatures] = useState(() => {
