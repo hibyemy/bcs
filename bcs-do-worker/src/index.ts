@@ -11,22 +11,24 @@ export class MultiplayerHub extends DurableObject {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 		// Initialize the SQLite tables and indexes
-		this.ctx.storage.sql.exec(`
-			CREATE TABLE IF NOT EXISTS messages (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				type TEXT,
-				username TEXT,
-				content TEXT,
-				timestamp INTEGER
-			);
-		`);
-		this.ctx.storage.sql.exec(`
-			CREATE TABLE IF NOT EXISTS users (
-				user_id TEXT PRIMARY KEY,
-				username TEXT
-			);
-		`);
-		this.ctx.storage.sql.exec(`CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);`);
+		this.ctx.blockConcurrencyWhile(async () => {
+			this.ctx.storage.sql.exec(`
+				CREATE TABLE IF NOT EXISTS messages (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					type TEXT,
+					username TEXT,
+					content TEXT,
+					timestamp INTEGER
+				);
+			`);
+			this.ctx.storage.sql.exec(`
+				CREATE TABLE IF NOT EXISTS users (
+					user_id TEXT PRIMARY KEY,
+					username TEXT
+				);
+			`);
+			this.ctx.storage.sql.exec(`CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);`);
+		});
 	}
 
 	async fetch(request: Request) {
@@ -46,7 +48,7 @@ export class MultiplayerHub extends DurableObject {
 				ORDER BY timestamp DESC 
 				LIMIT 50
 			`);
-			const history = [...cursor].reverse();
+			const history = cursor.toArray().reverse();
 			
 			server.send(JSON.stringify({
 				type: 'history',
@@ -102,7 +104,7 @@ export class MultiplayerHub extends DurableObject {
 					// Lookup secure username from database
 					let username = "Guest_" + userId.substring(0, 6);
 					const userCursor = this.ctx.storage.sql.exec(`SELECT username FROM users WHERE user_id = ?`, userId);
-					const userRows = [...userCursor];
+					const userRows = userCursor.toArray();
 					if (userRows.length > 0) {
 						username = String(userRows[0].username);
 					}

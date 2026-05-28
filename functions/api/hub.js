@@ -33,14 +33,19 @@ export async function onRequest(context) {
 		issuer: context.env.AUTH_ISSUER_URL || (url.hostname === "localhost" || url.hostname === "127.0.0.1" ? "http://localhost:8789" : "https://openauth-template.bc2005530.workers.dev"),
 	});
 
+	console.log("[hub] Token lookup: cookie=" + (getCookie(request, "bcs_access_token") ? "present" : "missing") + ", query=" + (url.searchParams.get("token") ? "present" : "missing"));
+
 	let userId = "";
 	try {
 		const verified = await client.verify(subjects, token);
 		if (verified.err) {
+			console.error("[hub] Token verification failed:", verified.err, "Token snippet:", token ? token.substring(0, 15) + "..." : "null");
 			return new Response("Invalid or expired token", { status: 401 });
 		}
 		userId = verified.subject.properties.id;
+		console.log("[hub] Token verified successfully for user:", userId);
 	} catch (e) {
+		console.error("[hub] Token verification exception:", e, "Token snippet:", token ? token.substring(0, 15) + "..." : "null");
 		return new Response("Authorization error", { status: 401 });
 	}
 
