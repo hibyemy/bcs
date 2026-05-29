@@ -6,7 +6,7 @@ export function useTelemetry() {
   return useContext(TelemetryContext);
 }
 
-export function TelemetryProvider({ children, enabled = true }) {
+export function TelemetryProvider({ children, enabled = true, isAuthenticated = false }) {
   const [telemetry, setTelemetry] = useState({
     iss: null,
     node: null,
@@ -85,15 +85,13 @@ export function TelemetryProvider({ children, enabled = true }) {
 
     // 4. WebSocket setup
     const connectWs = () => {
-      fetch('/api/me')
+      fetch('/api/me?t=' + Date.now(), { cache: 'no-store' })
         .then(res => res.json())
         .then(data => {
           if (!data.authenticated) {
             console.warn("[ws] Connection aborted: user not authenticated");
             setIsConnected(false);
-            if (document.cookie.includes('bcs_is_auth=true')) {
-              window.location.reload();
-            }
+            window.location.reload();
             return;
           }
 
@@ -161,7 +159,9 @@ export function TelemetryProvider({ children, enabled = true }) {
         });
     };
 
-    connectWs();
+    if (isAuthenticated) {
+      connectWs();
+    }
 
     // 5. Cleanup stale presences
     const cleanupTimer = setInterval(() => {
@@ -189,7 +189,7 @@ export function TelemetryProvider({ children, enabled = true }) {
         wsRef.current.close();
       }
     };
-  }, [enabled, sendPresence]);
+  }, [enabled, sendPresence, isAuthenticated]);
 
   return (
     <TelemetryContext.Provider value={{ telemetry, presences, chatMessages, sendChatMessage, setCallsign, isConnected }}>

@@ -25,16 +25,16 @@ export async function onRequest(context) {
 	const token = getCookie(request, "bcs_access_token") || url.searchParams.get("token");
 	const refreshToken = getCookie(request, "bcs_refresh_token");
 
+	console.log("[hub] Upgrade request received. Token lookup: cookie=" + (getCookie(request, "bcs_access_token") ? "present" : "missing") + ", query=" + (url.searchParams.get("token") ? "present" : "missing") + ", refresh=" + (refreshToken ? "present" : "missing") + ", token_val=" + (token ? token.substring(0, 10) + "..." : "null"));
+
 	if (!token || token === "undefined") {
 		return new Response("Missing authorization token", { status: 401 });
 	}
 
 	const client = createClient({
 		clientID: "bcs-frontend",
-		issuer: context.env.AUTH_ISSUER_URL || (url.hostname === "localhost" || url.hostname === "127.0.0.1" ? "http://localhost:8789" : "https://openauth-template.bc2005530.workers.dev"),
+		issuer: context.env.AUTH_ISSUER_URL || (url.hostname === "localhost" || url.hostname === "127.0.0.1" ? "http://localhost:8789" : "https://auth.bowenchen.xyz"),
 	});
-
-	console.log("[hub] Token lookup: cookie=" + (getCookie(request, "bcs_access_token") ? "present" : "missing") + ", query=" + (url.searchParams.get("token") ? "present" : "missing") + ", refresh=" + (refreshToken ? "present" : "missing"));
 
 	let userId = "";
 	let verified = null;
@@ -71,8 +71,10 @@ export async function onRequest(context) {
 	if (verified && verified.tokens) {
 		console.log("[hub] Connection upgraded and tokens auto-refreshed, setting new cookies.");
 		const newResponse = new Response(response.body, response);
-		newResponse.headers.append("Set-Cookie", `bcs_access_token=${verified.tokens.access}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`);
-		if (verified.tokens.refresh) {
+		if (verified.tokens.access && verified.tokens.access !== "undefined") {
+			newResponse.headers.append("Set-Cookie", `bcs_access_token=${verified.tokens.access}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`);
+		}
+		if (verified.tokens.refresh && verified.tokens.refresh !== "undefined") {
 			newResponse.headers.append("Set-Cookie", `bcs_refresh_token=${verified.tokens.refresh}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
 		}
 		newResponse.headers.append("Set-Cookie", `bcs_is_auth=true; Path=/; Secure; SameSite=Lax; Max-Age=3600`);

@@ -26,7 +26,7 @@ export async function onRequestGet(context) {
 
   const client = createClient({
     clientID: "bcs-frontend",
-    issuer: context.env.AUTH_ISSUER_URL || (url.hostname === "localhost" || url.hostname === "127.0.0.1" ? "http://localhost:8789" : "https://openauth-template.bc2005530.workers.dev"),
+    issuer: context.env.AUTH_ISSUER_URL || (url.hostname === "localhost" || url.hostname === "127.0.0.1" ? "http://localhost:8789" : "https://auth.bowenchen.xyz"),
   });
 
   try {
@@ -62,13 +62,18 @@ export async function onRequestGet(context) {
 
     const userId = verified.subject.properties.id;
     const headers = new Headers({
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0"
     });
 
     if (newTokens) {
       console.log("[me] Tokens refreshed successfully. Setting new cookies.");
-      headers.append("Set-Cookie", `bcs_access_token=${newTokens.access}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`);
-      if (newTokens.refresh) {
+      if (newTokens.access && newTokens.access !== "undefined") {
+        headers.append("Set-Cookie", `bcs_access_token=${newTokens.access}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`);
+      }
+      if (newTokens.refresh && newTokens.refresh !== "undefined") {
         headers.append("Set-Cookie", `bcs_refresh_token=${newTokens.refresh}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
       }
       headers.append("Set-Cookie", `bcs_is_auth=true; Path=/; Secure; SameSite=Lax; Max-Age=3600`);
@@ -87,7 +92,10 @@ export async function onRequestGet(context) {
 
 function clearSessionResponse() {
   const headers = new Headers({
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0"
   });
   headers.append("Set-Cookie", "bcs_access_token=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT");
   headers.append("Set-Cookie", "bcs_refresh_token=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT");

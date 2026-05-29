@@ -249,7 +249,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     // Session state verification on mount
-    fetch('/api/me')
+    fetch('/api/me?t=' + Date.now(), { cache: 'no-store' })
       .then(r => r.json())
       .then(data => {
         setHasAccess(data.authenticated);
@@ -260,7 +260,7 @@ export default function Dashboard() {
   }, []);
 
   const handleLogin = () => {
-    const baseUrl = import.meta.env.VITE_AUTH_ISSUER_URL || (import.meta.env.DEV ? "http://localhost:8789" : "https://openauth-template.bc2005530.workers.dev");
+    const baseUrl = import.meta.env.VITE_AUTH_ISSUER_URL || (import.meta.env.DEV ? "http://localhost:8789" : "https://auth.bowenchen.xyz");
     const authUrl = new URL(baseUrl + "/authorize");
     authUrl.searchParams.set("client_id", "bcs-frontend");
     authUrl.searchParams.set("redirect_uri", window.location.origin + "/api/callback");
@@ -332,7 +332,7 @@ export default function Dashboard() {
   ));
 
   return (
-    <TelemetryProvider enabled={features.livefeeds || features.globe || features.chat}>
+    <TelemetryProvider enabled={features.livefeeds || features.globe || features.chat} isAuthenticated={hasAccess}>
       <div className="min-h-screen w-full bg-black grid-bg scanlines relative overflow-hidden">
 
       {/* ── Matrix rain background ────────────────── */}
