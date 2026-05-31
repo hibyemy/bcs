@@ -8,6 +8,8 @@ import * as React from 'react';
 import { render } from '@react-email/render';
 import { VerificationEmail } from './VerificationEmail';
 
+let authIssuer: ReturnType<typeof issuer>;
+
 // This value should be shared between the OpenAuth server Worker and other
 // client Workers that you connect to it, so the types and schema validation are
 // consistent.
@@ -40,7 +42,8 @@ export default {
 		}
 
 		// The real OpenAuth server code starts here:
-		return issuer({
+		if (!authIssuer) {
+			authIssuer = issuer({
 			storage: CloudflareStorage({
 				namespace: env.AUTH_STORAGE,
 			}),
@@ -151,7 +154,9 @@ export default {
 					id: await getOrCreateUser(env, value.email),
 				});
 			},
-		}).fetch(request, env, ctx);
+			});
+		}
+		return authIssuer.fetch(request, env, ctx);
 	},
 } satisfies ExportedHandler<Env>;
 
